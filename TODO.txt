@@ -1,0 +1,11 @@
+Algorithms :
+
+fcfs : kawtar
+sfj : malak
+priority - non preimptive : kawtar
+priority - preimptive : kawtar
+round robin : malak
+priority rr : mk
+
+*priority - aging : mk
+
