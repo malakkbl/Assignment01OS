@@ -52,3 +52,5 @@ def sjf(processes: List[Process]):
         'avg_turnaround' : avg_tat,
         'cpu_utilisation': cpu_util
     }
+    
+
