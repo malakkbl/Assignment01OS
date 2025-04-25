@@ -1,6 +1,5 @@
 
-from typing import List, Dict, Any
-from collections import deque
+from typing import List, Any
 
 def sort_by_arrival(process_list: List[Any]) -> List[Any]:
     """Return a new list of processes sorted by arrival_time."""
@@ -23,15 +22,3 @@ def run_to_completion(proc: Any, current_time: int) -> tuple[int, int]:
     finish = start + proc.burst_time
     proc.turnaround_time = finish - proc.arrival_time
     return start, finish
-
-def pick_highest_priority(ready: Dict[int, deque]) -> int:
-    """
-    Given a dict priority→deque, return the highest priority key.
-    """
-    return max(ready.keys())
-
-def fast_forward(current_time: int, next_arrivals: List[int]) -> int:
-    """
-    If CPU is idle, jump current_time to the soonest arrival in next_arrivals.
-    """
-    return min(next_arrivals)
