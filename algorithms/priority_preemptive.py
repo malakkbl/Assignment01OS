@@ -1,6 +1,10 @@
-# priority_preemptive_simple.py
+# priority_preemptive.py
 
 from process import Process
+from algorithms.utility_functions import (
+    sort_by_arrival,      # helper: returns processes sorted by arrival_time
+    init_current_time,    # helper: picks earliest arrival or returns 0
+)
 
 def priority_preemptive_schedule(process_list):
     """
@@ -14,7 +18,7 @@ def priority_preemptive_schedule(process_list):
     Also sets each Process.turnaround_time when it fully completes.
     """
     # 1) Sort all processes by arrival time so we can pop the earliest
-    arrival = sorted(process_list, key=lambda p: p.arrival_time)
+    arrival = sort_by_arrival(process_list)
 
     # 2) ready: map from priority -> list of waiting processes (FIFO per priority)
     ready = {}
@@ -23,7 +27,7 @@ def priority_preemptive_schedule(process_list):
     schedule = []
 
     # 4) Initialize clock to first arrival (or 0 if no processes)
-    current_time = arrival[0].arrival_time if arrival else 0
+    current_time = init_current_time(arrival)
 
     # 5) Track the currently running process and when it began its current segment
     current = None
@@ -32,7 +36,7 @@ def priority_preemptive_schedule(process_list):
     # 6) Loop until there are no arrivals left, no ready processes, and no running process
     while arrival or ready or current:
         # 6a) Enqueue any processes that have arrived by now
-        while arrival and arrival[0].arrival_time <= current_time:
+        while arrival and arrival[0].arrival_time == current_time:
             p = arrival.pop(0)
             # add to its priority list, creating one if necessary
             if p.priority in ready:
@@ -96,13 +100,13 @@ def priority_preemptive_schedule(process_list):
     return schedule
 
 
-# ───────── Example Usage ─────────
+"""# ───────── Example Usage ─────────
 if __name__ == '__main__':
     # define some processes: pid, arrival_time, burst_time, priority
     p1 = Process('A', arrival_time=0, burst_time=8, priority=2)
     p2 = Process('B', arrival_time=1, burst_time=4, priority=1)
     p3 = Process('C', arrival_time=12, burst_time=9, priority=3)
-    p4 = Process('D', arrival_time=14, burst_time=5, priority=2)
+    p4 = Process('D', arrival_time=6, burst_time=5, priority=1)
 
     procs = [p1, p2, p3, p4]
     result = priority_preemptive_schedule(procs)
@@ -110,3 +114,4 @@ if __name__ == '__main__':
     # print all execution segments
     for seg in result:
         print(f"{seg['pid']} → {seg['start']} to {seg['finish']} (TAT={seg['turnaround']})")
+"""

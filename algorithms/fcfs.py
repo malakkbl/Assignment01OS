@@ -1,5 +1,5 @@
 # First-Come, First-Served (FCFS) Scheduling Algorithm
-"""from process import Process
+from process import Process
 
 def fcfs_schedule(process_list):
     procs = sorted(process_list, key=lambda p: p.arrival_time)
@@ -19,34 +19,11 @@ def fcfs_schedule(process_list):
         })
         current_time = finish
 
-    return schedule"""
-
-# fcfs.py
-from collections import deque
-from process import Process
-from utility_functions import sort_by_arrival, init_current_time, run_to_completion
-
-def fcfs_schedule(process_list):
-    arrival_q  = deque(sort_by_arrival(process_list))
-    schedule   = []
-    current_time = init_current_time(process_list)
-
-    while arrival_q:
-        proc = arrival_q.popleft()
-        start, finish = run_to_completion(proc, current_time)
-        schedule.append({
-            'pid': proc.pid,
-            'start': start,
-            'finish': finish,
-            'turnaround': proc.turnaround_time
-        })
-        current_time = finish
-
     return schedule
 
 # ─────────── Example Usage ───────────
 
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     # Tricky test case:
     # - CPU idle until t=3
     # - Two processes arriving at same time (B vs C)
@@ -62,3 +39,4 @@ if __name__ == "__main__":
     for entry in result:
         print(f"Process {entry['pid']} ran from t={entry['start']} "
               f"to t={entry['finish']} (TAT={entry['turnaround']})")
+"""
