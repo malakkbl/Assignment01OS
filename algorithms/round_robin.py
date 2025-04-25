@@ -16,7 +16,7 @@ def round_robin(processes: List[Process],
 
     clock          = 0
     idle_time      = 0
-    first_response = {}        # ?? 
+    first_response = {}        # The first time the process accesses the CPU 
 
     while processes or ready_q:
         # In each iteration : move newly arrived jobs into ready_q + pick one ready process
