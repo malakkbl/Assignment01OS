@@ -1,19 +1,23 @@
 # Main program to run the simulation
-# ─────────────── main.py ───────────────
 from process import Process
 from algorithms.fcfs import fcfs_schedule
 from algorithms.priority_non_preemptive import priority_schedule
 from algorithms.priority_preemptive import priority_preemptive_schedule
+from algorithms.sjf       import sjf               
+from algorithms.round_robin  import round_robin        
 
 
 # ---------------- MENU -----------------
 def choose_algorithm():
     """Return (algo_name, algo_function) chosen by the user."""
     algos = {
-        "1": ("FCFS",                       fcfs_schedule),
-        "2": ("Priority (non-preemptive)",  priority_schedule),
-        "3": ("Priority (preemptive)",      priority_preemptive_schedule),
-    }
+    "1": ("FCFS",                       fcfs_schedule),
+    "2": ("Priority (non-preemptive)",  priority_schedule),
+    "3": ("Priority (preemptive)",      priority_preemptive_schedule),
+    "4": ("Shortest-Job-First (SJF)",   sjf),         
+    "5": ("Round-Robin",                round_robin), 
+}
+
     while True:
         print("\nSelect the scheduling algorithm:")
         for k, (name, _) in algos.items():

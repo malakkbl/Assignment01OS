@@ -6,13 +6,13 @@ from process import Process
 def round_robin(processes: List[Process],
                 quantum: int = 4,
                 context_switch: int = 0
-               ) -> Tuple[List[Process], dict]:
-
+               ) -> Tuple[List[Process], List[dict], dict]:
 
     # Sort the processes in chronological order of arrival time
     processes = sorted(processes, key=lambda p: p.arrival_time)
     ready_q   : deque[Process] = deque()
     completed : List[Process]  = []
+    schedule  : List[dict]     = []   # NEW timeline list  (one entry per slice)
 
     clock          = 0
     idle_time      = 0
@@ -38,8 +38,16 @@ def round_robin(processes: List[Process],
             first_response[current.pid] = clock - current.arrival_time
 
         run_time = min(quantum, current.remaining_time)
+        start    = clock                                # NEW start time for slice
         clock   += run_time
         current.remaining_time -= run_time
+
+        # ---------- NEW ---------- store this CPU slice in the schedule
+        schedule.append({
+            'pid':   current.pid,
+            'start': start,
+            'finish': clock     # end of this slice
+        })
 
         # In case the process is not finished , we add the context switch time then add it back to the queue
         if current.remaining_time > 0:
@@ -65,7 +73,7 @@ def round_robin(processes: List[Process],
     avg_resp  = sum(first_response[p.pid] for p in completed) / n
     cpu_util  = 100 * (clock - idle_time) / clock
 
-    return completed, {
+    return completed, schedule, {
         "avg_waiting"     : avg_wait,
         "avg_turnaround"  : avg_tat,
         "avg_response"    : avg_resp,
