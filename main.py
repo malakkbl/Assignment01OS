@@ -83,8 +83,6 @@ def print_schedule(tbl):
     }
 
 
-
-
 # --------------- DRIVER ----------------
 def main():
     algo_name, algo_fn = choose_algorithm()
