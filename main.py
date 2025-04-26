@@ -3,7 +3,8 @@ from algorithms.fcfs import fcfs_schedule
 from algorithms.priority_non_preemptive import priority_schedule
 from algorithms.priority_preemptive import priority_preemptive_schedule
 from algorithms.sjf       import sjf               
-from algorithms.round_robin  import round_robin        
+from algorithms.round_robin  import round_robin
+from algorithms.priority_rr        import priority_round_robin        
 
 # ---------------- MENU -----------------
 def choose_algorithm():
@@ -14,6 +15,7 @@ def choose_algorithm():
         "3": ("Priority (preemptive)",      priority_preemptive_schedule),
         "4": ("Shortest-Job-First (SJF)",   sjf),         
         "5": ("Round-Robin",                round_robin), 
+        "6": ("Priority + Round-Robin",     priority_round_robin),
     }
 
     while True:
