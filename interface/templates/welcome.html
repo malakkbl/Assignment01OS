@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero is-light">
+  <div class="hero-body">
+    <p class="title">Hello there 👋</p>
+    <p class="subtitle">Enter your name to get started</p>
+
+    <form method="post">
+      <div class="field has-addons">
+        <div class="control is-expanded">
+          <input class="input" type="text" name="username" placeholder="Your name" required>
+        </div>
+        <div class="control">
+          <button class="button is-primary">Get started</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

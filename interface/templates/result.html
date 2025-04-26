@@ -1,35 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="title">{{algo_name}} – Result</h1>
+<h1 class="title">{{algo}} – results for {{name}}</h1>
 
-<h2 class="subtitle">Metrics</h2>
+<!-- Metrics -->
 <table class="table is-bordered">
   {% for k,v in metrics.items() %}
     <tr><th>{{k.replace('_',' ').title()}}</th><td>{{"%.2f"|format(v)}}</td></tr>
   {% endfor %}
 </table>
 
-<h2 class="subtitle">Gantt Chart</h2>
-<svg id="gantt" width="100%" height="{{schedule|length*30+20}}"></svg>
+<!-- Per-process -->
+<h2 class="subtitle">Per-process stats</h2>
+<table class="table is-striped">
+  <thead><tr><th>PID</th><th>Waiting</th><th>Turnaround</th><th>Completion</th></tr></thead>
+  <tbody>
+    {% for p in procs %}
+      <tr><td>{{p.pid}}</td><td>{{p.waiting_time}}</td><td>{{p.turnaround_time}}</td><td>{{p.completion_time}}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
 
+<!-- Gantt SVG -->
+<h2 class="subtitle">Gantt chart</h2>
+<svg id="gantt" width="100%" height="{{schedule|length*30+20}}"></svg>
 <script>
-const schedule = {{schedule|tojson}};
-const unit = 30; const barH = 20;
-const svg  = document.getElementById("gantt");
-schedule.forEach((seg,i)=>{
-   const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-   const x = seg.start*unit, w = (seg.finish-seg.start)*unit, y=i*30;
-   const rect = document.createElementNS(svg.namespaceURI,"rect");
-   rect.setAttribute("x",x); rect.setAttribute("y",y);
-   rect.setAttribute("width",w); rect.setAttribute("height",barH);
-   rect.setAttribute("fill","#48c774");
-   g.appendChild(rect);
-   const txt = document.createElementNS(svg.namespaceURI,"text");
-   txt.setAttribute("x",x+w/2); txt.setAttribute("y",y+15);
-   txt.setAttribute("fill","white"); txt.setAttribute("text-anchor","middle");
-   txt.textContent=seg.pid;
-   g.appendChild(txt);
-   svg.appendChild(g);
+const s={{schedule|tojson}}, unit=30, h=20, svg=document.getElementById('gantt');
+s.forEach((seg,i)=>{
+  const g=svg.appendChild(document.createElementNS(svg.namespaceURI,'g'));
+  const rect=document.createElementNS(svg.namespaceURI,'rect');
+  rect.setAttribute('x',seg.start*unit); rect.setAttribute('y',i*30);
+  rect.setAttribute('width',(seg.finish-seg.start)*unit); rect.setAttribute('height',h);
+  rect.setAttribute('fill','#3273dc'); g.appendChild(rect);
+  const t=document.createElementNS(svg.namespaceURI,'text');
+  t.setAttribute('x',(seg.start+seg.finish)*unit/2); t.setAttribute('y',i*30+15);
+  t.setAttribute('fill','white'); t.setAttribute('text-anchor','middle');
+  t.textContent=seg.pid; g.appendChild(t);
 });
 </script>
 {% endblock %}
