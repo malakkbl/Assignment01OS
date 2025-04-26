@@ -17,6 +17,9 @@ class Process:
         
         # Priority level (unused in FCFS; useful for priority scheduling later)
         self.priority = priority 
+        
+        self.completion_time = 0
+        self.waiting_time = 0
 
     def __str__(self):
         return (f"Process ID: {self.pid}, "
@@ -24,4 +27,6 @@ class Process:
                 f"Burst: {self.burst_time}, "
                 f"Remaining: {self.remaining_time}, "
                 f"Turnaround: {self.turnaround_time}, "
-                f"Priority: {self.priority}")
+                f"Priority: {self.priority},"
+                f"Completion: {self.completion_time} ,"
+                f"Waiting: {self.waiting_time}")
