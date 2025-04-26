@@ -1,40 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="title">{{algo}} – results for {{name}}</h1>
 
-<!-- Metrics -->
-<table class="table is-bordered">
-  {% for k,v in metrics.items() %}
-    <tr><th>{{k.replace('_',' ').title()}}</th><td>{{"%.2f"|format(v)}}</td></tr>
-  {% endfor %}
-</table>
+<style>
+  html,body{height:100%;margin:0;}
 
-<!-- Per-process -->
-<h2 class="subtitle">Per-process stats</h2>
-<table class="table is-striped">
-  <thead><tr><th>PID</th><th>Waiting</th><th>Turnaround</th><th>Completion</th></tr></thead>
-  <tbody>
-    {% for p in procs %}
-      <tr><td>{{p.pid}}</td><td>{{p.waiting_time}}</td><td>{{p.turnaround_time}}</td><td>{{p.completion_time}}</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+  /* background */
+  .res-wrapper{
+      display:flex; align-items:center; justify-content:center;
+      height:100vh;
+      background:radial-gradient(circle at 1px 1px,#d9d9d9 1px,#f4f4f4 0);
+      background-size:16px 16px;
+      position:relative;        /* for abs back-btn */
+  }
 
-<!-- Gantt SVG -->
-<h2 class="subtitle">Gantt chart</h2>
-<svg id="gantt" width="100%" height="{{schedule|length*30+20}}"></svg>
+  /* card */
+  .res-box{
+      background:#fff;
+      padding:3rem 4rem;
+      border-radius:8px;
+      box-shadow:0 6px 18px rgba(0,0,0,.08);
+      width:100%; max-width:800px;
+  }
+
+  /* headings */
+  h1.title{color:#222;text-align:center;font-weight:600;}
+  h2.subtitle{color:#555;font-weight:400;margin-top:2rem;}
+
+  /* back button style */
+  .back-btn{
+      position:absolute; top:20px;left:20px;
+      display:flex; align-items:center; gap:4px;
+      background:#333;border:none;border-radius:4px;
+      color:#fff; padding:6px 10px; cursor:pointer;
+  }
+  .back-btn:hover{background:#222;}
+
+  /* gantt bars */
+  #gantt text{font-size:.75rem}
+</style>
+
+<div class="res-wrapper">
+
+  <!-- back to config page -->
+  <form action="{{ url_for('config') }}" method="get">
+     <button class="back-btn">‹ Back</button>
+  </form>
+
+  <div class="res-box">
+
+    <h1 class="title">{{algo}} – results for {{name}}</h1>
+
+    <!-- Metrics -->
+    <table class="table is-bordered is-fullwidth mt-5">
+      {% for k,v in metrics.items() %}
+        <tr>
+          <th>{{k.replace('_',' ').title()}}</th>
+          <td>{{"%.2f"|format(v)}}</td>
+        </tr>
+      {% endfor %}
+    </table>
+
+    <!-- Per-process -->
+    <h2 class="subtitle">Per-process stats</h2>
+    <table class="table is-striped is-fullwidth">
+      <thead>
+        <tr><th>PID</th><th>Waiting</th><th>Turnaround</th><th>Completion</th></tr>
+      </thead>
+      <tbody>
+        {% for p in procs %}
+          <tr>
+            <td>{{p.pid}}</td>
+            <td>{{p.waiting_time}}</td>
+            <td>{{p.turnaround_time}}</td>
+            <td>{{p.completion_time}}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Gantt -->
+    <h2 class="subtitle">Gantt chart</h2>
+    <svg id="gantt"
+         width="100%"
+         height="{{ (schedule|length) * 30 + 20 }}"></svg>
+  </div>
+</div>
+
 <script>
-const s={{schedule|tojson}}, unit=30, h=20, svg=document.getElementById('gantt');
-s.forEach((seg,i)=>{
-  const g=svg.appendChild(document.createElementNS(svg.namespaceURI,'g'));
-  const rect=document.createElementNS(svg.namespaceURI,'rect');
-  rect.setAttribute('x',seg.start*unit); rect.setAttribute('y',i*30);
-  rect.setAttribute('width',(seg.finish-seg.start)*unit); rect.setAttribute('height',h);
-  rect.setAttribute('fill','#3273dc'); g.appendChild(rect);
-  const t=document.createElementNS(svg.namespaceURI,'text');
-  t.setAttribute('x',(seg.start+seg.finish)*unit/2); t.setAttribute('y',i*30+15);
-  t.setAttribute('fill','white'); t.setAttribute('text-anchor','middle');
-  t.textContent=seg.pid; g.appendChild(t);
+const slices = {{schedule|tojson}};
+const unit = 30, barH = 20;
+const svg  = document.getElementById('gantt');
+
+slices.forEach((seg,i)=>{
+  const g   = svg.appendChild(document.createElementNS(svg.namespaceURI,'g'));
+  const rect= document.createElementNS(svg.namespaceURI,'rect');
+  rect.setAttribute('x', seg.start*unit);
+  rect.setAttribute('y', i*30);
+  rect.setAttribute('width', (seg.finish-seg.start)*unit);
+  rect.setAttribute('height', barH);
+  rect.setAttribute('fill', '#3273dc');
+  g.appendChild(rect);
+
+  const txt = document.createElementNS(svg.namespaceURI,'text');
+  txt.setAttribute('x', (seg.start+seg.finish)*unit/2);
+  txt.setAttribute('y', i*30+14);
+  txt.setAttribute('fill', 'white');
+  txt.setAttribute('text-anchor', 'middle');
+  txt.textContent = seg.pid;
+  g.appendChild(txt);
 });
 </script>
+
 {% endblock %}
