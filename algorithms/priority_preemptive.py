@@ -13,7 +13,7 @@ def priority_preemptive_schedule(process_list):
         completed (List[Process]),
         schedule (List[dict]): one per slice, keys pid, start, finish, turnaround
         stats (dict): avg_waiting, avg_turnaround, avg_response, cpu_utilisation
-    Also sets each Process.turnaround_time & waiting_time on completion.
+    Also sets each Process.completion_time, turnaround_time & waiting_time on completion.
     """
     # 1) Sort all processes by arrival time so we can pop the earliest
     arrival = sort_by_arrival(process_list)
@@ -87,6 +87,8 @@ def priority_preemptive_schedule(process_list):
                 'finish':     current_time,
                 'turnaround': turnaround
             })
+            # update the Process object’s metrics
+            current.completion_time = current_time
             current.turnaround_time = turnaround
             current.waiting_time = turnaround - current.burst_time
             completed.append(current)
@@ -108,7 +110,7 @@ def priority_preemptive_schedule(process_list):
 
     return completed, schedule, stats
 
-"""# ───────── Example Usage ─────────
+# ───────── Example Usage ─────────
 if __name__ == '__main__':
     # define some processes: pid, arrival_time, burst_time, priority
     p1 = Process('A', arrival_time=0, burst_time=8, priority=2)
@@ -117,9 +119,8 @@ if __name__ == '__main__':
     p4 = Process('D', arrival_time=6, burst_time=5, priority=1)
 
     procs = [p1, p2, p3, p4]
-    result = priority_preemptive_schedule(procs)
+    completed, result, stats = priority_preemptive_schedule(procs)
 
-    # print all execution segments
-    for seg in result:
-        print(f"{seg['pid']} → {seg['start']} to {seg['finish']} (TAT={seg['turnaround']})")
-"""
+    # print completion time for each process
+    for proc in completed:
+        print(f"PID {proc.pid}: completion_time = {proc.completion_time}, turnaround = {proc.turnaround_time}, waiting = {proc.waiting_time}")

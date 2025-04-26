@@ -1,114 +1,625 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header Section -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">{{ algo }} – Results for {{ name }}</h1>
+            <a href="/config" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Configuration
+            </a>
+        </div>
 
-<style>
-  html,body{height:100%;margin:0;}
+        <!-- Metrics Display -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {% for k, v in metrics.items() %}
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6">
+                    <div class="text-center">
+                        <h3 class="text-lg font-medium text-gray-500 mb-1">{{ k.replace('_', ' ')|title() }}</h3>
+                        <p class="text-3xl font-bold text-blue-600">{{ "%.2f"|format(v) }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
 
-  /* background */
-  .res-wrapper{
-      display:flex; align-items:center; justify-content:center;
-      height:100vh;
-      background:radial-gradient(circle at 1px 1px,#d9d9d9 1px,#f4f4f4 0);
-      background-size:16px 16px;
-      position:relative;        /* for abs back-btn */
-  }
+        <!-- Process Details Table -->
+        <div class="process-results mb-8">
+            <h3 class="text-xl font-semibold mb-4">Process Details:</h3>
+            <table class="process-table w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrival</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Burst</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turnaround</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waiting</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for proc in procs %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ proc.job }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ proc.arrival_time }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ proc.burst_time }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ proc.finish_time }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ proc.turnaround_time }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ proc.waiting_time }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-  /* card */
-  .res-box{
-      background:#fff;
-      padding:3rem 4rem;
-      border-radius:8px;
-      box-shadow:0 6px 18px rgba(0,0,0,.08);
-      width:100%; max-width:800px;
-  }
+        <!-- Gantt Chart Section -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
+                <h2 class="text-xl font-semibold text-white">Process Execution Timeline</h2>
+            </div>
+            <div class="p-6">
+                <div class="mb-4 overflow-x-auto">
+                    <div id="ganttContainer" class="min-w-full" style="position: relative; height: {{ (procs|length * 40) + 70 }}px;"></div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex flex-wrap items-center justify-center gap-4">
+                        {% for p in procs %}
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 rounded" style="background-color: {{ pidToColor[p.pid] }}"></div>
+                            <span class="text-sm">Process {{ p.pid }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-  /* headings */
-  h1.title{color:#222;text-align:center;font-weight:600;}
-  h2.subtitle{color:#555;font-weight:400;margin-top:2rem;}
-
-  /* back button style */
-  .back-btn{
-      position:absolute; top:20px;left:20px;
-      display:flex; align-items:center; gap:4px;
-      background:#333;border:none;border-radius:4px;
-      color:#fff; padding:6px 10px; cursor:pointer;
-  }
-  .back-btn:hover{background:#222;}
-
-  /* gantt bars */
-  #gantt text{font-size:.75rem}
-</style>
-
-<div class="res-wrapper">
-
-  <!-- back to config page -->
-  <form action="{{ url_for('config') }}" method="get">
-     <button class="back-btn">‹ Back</button>
-  </form>
-
-  <div class="res-box">
-
-    <h1 class="title">{{algo}} – results for {{name}}</h1>
-
-    <!-- Metrics -->
-    <table class="table is-bordered is-fullwidth mt-5">
-      {% for k,v in metrics.items() %}
-        <tr>
-          <th>{{k.replace('_',' ').title()}}</th>
-          <td>{{"%.2f"|format(v)}}</td>
-        </tr>
-      {% endfor %}
-    </table>
-
-    <!-- Per-process -->
-    <h2 class="subtitle">Per-process stats</h2>
-    <table class="table is-striped is-fullwidth">
-      <thead>
-        <tr><th>PID</th><th>Waiting</th><th>Turnaround</th><th>Completion</th></tr>
-      </thead>
-      <tbody>
-        {% for p in procs %}
-          <tr>
-            <td>{{p.pid}}</td>
-            <td>{{p.waiting_time}}</td>
-            <td>{{p.turnaround_time}}</td>
-            <td>{{p.completion_time}}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <!-- Gantt -->
-    <h2 class="subtitle">Gantt chart</h2>
-    <svg id="gantt"
-         width="100%"
-         height="{{ (schedule|length) * 30 + 20 }}"></svg>
-  </div>
+        <!-- Animation Section -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden mt-8">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <h2 class="text-xl font-semibold text-white">Execution Animation</h2>
+            </div>
+            <div class="p-6">
+                <div class="flex justify-between mb-4">
+                    <div class="flex items-center">
+                        <span class="text-sm text-gray-600 mr-2">Display:</span>
+                        <select id="visibleProcessSelect" class="text-sm border rounded px-2 py-1">
+                            <option value="12">First 12 Processes</option>
+                            <option value="20">First 20 Processes</option>
+                            <option value="all">All Processes</option>
+                        </select>
+                    </div>
+                    <button id="expandBtn" class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-expand"></i> Show All Processes
+                    </button>
+                </div>
+                <div id="animationContainer" class="overflow-y-auto overflow-x-auto" style="position: relative; max-height: 400px;"></div>
+                <div class="flex gap-4 mt-6 items-center justify-center">
+                    <div class="flex items-center gap-2">
+                        <label for="speedRange" class="text-sm font-medium">Speed:</label>
+                        <input type="range" id="speedRange" min="100" max="1000" step="100" value="500" class="w-32">
+                    </div>
+                    <button id="playBtn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-play"></i> Start
+                    </button>
+                    <button id="resetBtn" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="font-medium">Time:</span>
+                        <span id="currentTime">0</span>/<span id="totalTimeDisplay">{{ total_time }}</span>
+                    </div>
+                </div>
+                <div id="activeProcesses" class="mt-4 text-sm text-gray-600 text-center"></div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-const slices = {{schedule|tojson}};
-const unit = 30, barH = 20;
-const svg  = document.getElementById('gantt');
+    // ────────── INITIALIZATION ──────────
+    const scheduleData = {{ schedule|tojson }};
+    const processes = {{ procs|tojson }};
+    const totalTime = {{ total_time }};
+    const pidToColor = {{ pidToColor|tojson }};
+    const processIcons = ['⚙️', '🖥️', '📡', '💾', '📊', '🔧', '📶', '🔌', '💽', '📟', '🧠', '🛠️', '🔍', '📱', '🔋', '📂', '🔑', '💻', '🏢', '🔬', '📦', '🔋', '🔔', '🕹️', '🎛️'];
+    let timeScale = 50; // pixels per time unit
+    let showAllProcesses = false;
+    let maxVisibleProcesses = 12; // Increased from 5 to 12
 
-slices.forEach((seg,i)=>{
-  const g   = svg.appendChild(document.createElementNS(svg.namespaceURI,'g'));
-  const rect= document.createElementNS(svg.namespaceURI,'rect');
-  rect.setAttribute('x', seg.start*unit);
-  rect.setAttribute('y', i*30);
-  rect.setAttribute('width', (seg.finish-seg.start)*unit);
-  rect.setAttribute('height', barH);
-  rect.setAttribute('fill', '#3273dc');
-  g.appendChild(rect);
+    // ────────── STATIC GANTT CHART ──────────
+    function createGanttChart() {
+        const container = document.getElementById('ganttContainer');
+        container.innerHTML = '';
+        
+        const chartWidth = Math.max(container.clientWidth, totalTime * timeScale);
+        
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'relative';
+        chartContainer.style.width = `${chartWidth}px`;
 
-  const txt = document.createElementNS(svg.namespaceURI,'text');
-  txt.setAttribute('x', (seg.start+seg.finish)*unit/2);
-  txt.setAttribute('y', i*30+14);
-  txt.setAttribute('fill', 'white');
-  txt.setAttribute('text-anchor', 'middle');
-  txt.textContent = seg.pid;
-  g.appendChild(txt);
-});
+        // Time axis
+        const timeAxis = document.createElement('div');
+        timeAxis.className = 'absolute top-0 left-0 w-full h-8 flex';
+        
+        // Add tick marks based on total time
+        const tickInterval = totalTime > 20 ? 5 : 1;
+        for (let i = 0; i <= totalTime; i += tickInterval) {
+            const tick = document.createElement('div');
+            tick.className = 'absolute text-xs text-gray-600';
+            tick.style.left = `${i * timeScale}px`;
+            tick.textContent = i;
+            timeAxis.appendChild(tick);
+        }
+
+        // Process rows
+        processes.forEach((process, index) => {
+            const row = document.createElement('div');
+            row.className = 'absolute flex items-center';
+            row.style.top = `${index * 40 + 30}px`;
+            row.style.height = '30px';
+            row.style.width = '100%';
+
+            // Process label
+            const label = document.createElement('div');
+            label.className = 'absolute -left-32 w-28 text-sm font-medium pl-2';
+            label.textContent = `Process ${process.pid}`;
+
+            // Timeline
+            const timeline = document.createElement('div');
+            timeline.className = 'relative h-full w-full bg-gray-100 rounded';
+
+            scheduleData.filter(e => e.pid === process.pid).forEach(entry => {
+                const segment = document.createElement('div');
+                segment.className = 'absolute h-full flex items-center justify-center text-white text-xs font-bold';
+                segment.style.left = `${entry.start * timeScale}px`;
+                segment.style.width = `${(entry.finish - entry.start) * timeScale}px`;
+                segment.style.backgroundColor = pidToColor[process.pid];
+                segment.textContent = entry.finish - entry.start;
+                timeline.appendChild(segment);
+            });
+
+            row.appendChild(label);
+            row.appendChild(timeline);
+            chartContainer.appendChild(row);
+        });
+
+        container.appendChild(timeAxis);
+        container.appendChild(chartContainer);
+    }
+
+    // ────────── ANIMATED GANTT CHART ──────────
+    function createAnimationChart() {
+        const container = document.getElementById('animationContainer');
+        container.innerHTML = '';
+        
+        const chartWidth = Math.max(800, totalTime * timeScale);
+        
+        // Create timeline container with grid
+        const timeline = document.createElement('div');
+        timeline.className = 'relative process-track';
+        timeline.style.width = `${chartWidth}px`;
+        
+        // Dynamically calculate visible processes
+        const visibleProcesses = showAllProcesses ? processes : processes.slice(0, maxVisibleProcesses);
+        
+        // Determine display mode based on number of processes
+        const compactMode = visibleProcesses.length > 8;
+        const laneHeight = compactMode ? 40 : 60;
+        
+        // Set height based on number of visible processes
+        const timelineHeight = visibleProcesses.length * laneHeight + 40;
+        timeline.style.height = `${timelineHeight}px`;
+
+        // Add time markers at the top
+        const timeMarkers = document.createElement('div');
+        timeMarkers.className = 'absolute top-0 left-0 w-full h-8 flex time-markers';
+        timeMarkers.style.zIndex = '5';
+        
+        // Add tick marks based on total time
+        const tickInterval = totalTime > 20 ? 5 : 1;
+        for (let i = 0; i <= totalTime; i += tickInterval) {
+            const tick = document.createElement('div');
+            tick.className = 'absolute text-xs text-gray-600';
+            tick.style.left = `${i * timeScale}px`;
+            tick.textContent = i;
+            timeMarkers.appendChild(tick);
+        }
+        
+        timeline.appendChild(timeMarkers);
+
+        // Add process lanes
+        visibleProcesses.forEach((process, index) => {
+            const lane = document.createElement('div');
+            lane.className = 'absolute process-lane';
+            lane.style.top = `${index * laneHeight + 20}px`;
+            lane.style.height = compactMode ? '30px' : '40px';
+            lane.style.width = '100%';
+
+            // Process label on the left
+            const laneLabel = document.createElement('div');
+            laneLabel.className = 'absolute -left-20 top-0 h-full flex items-center';
+            laneLabel.innerHTML = `<span class="text-sm font-medium">P${process.pid}</span>`;
+            lane.appendChild(laneLabel);
+
+            // Process indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'absolute process-indicator';
+            indicator.dataset.pid = process.pid;
+            
+            // Use a unique icon for each process
+            const iconIndex = process.pid % processIcons.length;
+            indicator.innerHTML = processIcons[iconIndex];
+            
+            // Create a vibrant background color for the icon for better visibility
+            const processColor = pidToColor[process.pid];
+            indicator.style.color = '#fff'; // White text
+            indicator.style.backgroundColor = processColor;
+            indicator.style.borderRadius = '50%';
+            indicator.style.padding = '4px';
+            indicator.style.width = '32px';
+            indicator.style.height = '32px';
+            indicator.style.display = 'flex';
+            indicator.style.justifyContent = 'center';
+            indicator.style.alignItems = 'center';
+            indicator.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+            indicator.style.left = '-40px';
+            indicator.style.zIndex = '10';  // Ensure it appears above timeline segments
+
+            // Timeline segments
+            const track = document.createElement('div');
+            track.className = 'relative h-full w-full bg-gray-200 rounded overflow-hidden';
+
+            // Add execution segments
+            scheduleData.filter(e => e.pid === process.pid).forEach(entry => {
+                const segment = document.createElement('div');
+                segment.className = 'absolute h-full process-segment';
+                segment.dataset.start = entry.start;
+                segment.dataset.finish = entry.finish;
+                segment.dataset.pid = process.pid;
+                segment.style.left = `${entry.start * timeScale}px`;
+                segment.style.width = `${(entry.finish - entry.start) * timeScale}px`;
+                segment.style.backgroundColor = pidToColor[process.pid];
+                track.appendChild(segment);
+            });
+
+            lane.appendChild(track);
+            lane.appendChild(indicator);
+            timeline.appendChild(lane);
+        });
+
+        // Create current time indicator
+        const currentTimeIndicator = document.createElement('div');
+        currentTimeIndicator.id = 'currentTimeIndicator';
+        currentTimeIndicator.className = 'absolute h-full w-px bg-red-500 z-10';
+        currentTimeIndicator.style.left = '0px';
+        currentTimeIndicator.style.top = '0';
+        timeline.appendChild(currentTimeIndicator);
+
+        container.appendChild(timeline);
+        
+        // Show message if not all processes are visible
+        if (!showAllProcesses && processes.length > maxVisibleProcesses) {
+            const message = document.createElement('div');
+            message.className = 'text-center text-sm text-gray-500 mt-2';
+            message.textContent = `Showing ${maxVisibleProcesses} of ${processes.length} processes. Click "Show All Processes" to see all.`;
+            container.appendChild(message);
+        }
+    }
+
+    // ────────── ANIMATION CONTROLS ──────────
+    let currentTime = 0;
+    let animationInterval = null;
+    let isPlaying = false;
+    let animationSpeed = 500; // Default animation speed in milliseconds (lower = faster)
+
+    function updateAnimation(time) {
+        // Ensure time doesn't exceed totalTime for display purposes
+        const displayTime = Math.min(time, totalTime);
+        
+        // Update time indicator position
+        const timeIndicator = document.getElementById('currentTimeIndicator');
+        if (timeIndicator) {
+            timeIndicator.style.left = `${displayTime * timeScale}px`;
+        }
+
+        // Find active processes at current time
+        const activeProcesses = [];
+
+        document.querySelectorAll('.process-indicator').forEach(indicator => {
+            const pid = parseInt(indicator.dataset.pid);
+            const segments = scheduleData.filter(e => e.pid === pid);
+            
+            // Change the comparison to include the exact finish time
+            const activeSegment = segments.find(s => displayTime >= s.start && displayTime <= s.finish);
+
+            if (activeSegment) {
+                const position = displayTime * timeScale;
+                indicator.style.left = `${position}px`;
+                indicator.style.opacity = '1';
+                indicator.classList.add('process-active');
+                
+                // Add to active processes list
+                activeProcesses.push(`P${pid}`);
+                
+                // Highlight active segment
+                document.querySelectorAll(`.process-segment[data-pid="${pid}"]`).forEach(segment => {
+                    const segStart = parseFloat(segment.dataset.start);
+                    const segFinish = parseFloat(segment.dataset.finish);
+                    
+                    if (displayTime >= segStart && displayTime <= segFinish) {
+                        segment.classList.add('segment-active');
+                    } else {
+                        segment.classList.remove('segment-active');
+                    }
+                });
+                
+                setTimeout(() => indicator.classList.remove('process-active'), 200);
+            } else {
+                // Position indicators at their last known position when animation ends
+                if (displayTime === totalTime) {
+                    // Find the last segment for this process
+                    const lastSegment = [...segments].sort((a, b) => b.finish - a.finish)[0];
+                    if (lastSegment) {
+                        indicator.style.left = `${lastSegment.finish * timeScale}px`;
+                        indicator.style.opacity = '0.6';
+                    }
+                } else {
+                    // Normal behavior for inactive processes
+                    indicator.style.opacity = '0.3';
+                }
+                
+                // Remove highlight from inactive segments
+                document.querySelectorAll(`.process-segment[data-pid="${pid}"]`).forEach(segment => {
+                    segment.classList.remove('segment-active');
+                });
+            }
+        });
+        
+        // Update active processes display
+        const activeProcessDisplay = document.getElementById('activeProcesses');
+        if (activeProcessDisplay) {
+            if (activeProcesses.length > 0) {
+                activeProcessDisplay.textContent = `Active Process(es): ${activeProcesses.join(', ')}`;
+            } else {
+                activeProcessDisplay.textContent = 'No active processes';
+            }
+        }
+        
+        // Update current time display
+        document.getElementById('currentTime').textContent = displayTime;
+        
+        // Scroll container to keep time indicator visible if needed
+        const animationContainer = document.getElementById('animationContainer');
+        const indicatorPosition = displayTime * timeScale;
+        const containerScrollLeft = animationContainer.scrollLeft;
+        const containerWidth = animationContainer.clientWidth;
+        
+        // If time indicator is out of view, scroll to it
+        if (indicatorPosition < containerScrollLeft || indicatorPosition > containerScrollLeft + containerWidth - 50) {
+            animationContainer.scrollLeft = indicatorPosition - (containerWidth / 2);
+        }
+    }
+
+    function startAnimation() {
+        if (currentTime > totalTime) resetAnimation();
+        isPlaying = true;
+        document.getElementById('playBtn').innerHTML = '<i class="fas fa-pause"></i> Pause';
+        animationInterval = setInterval(() => {
+            updateAnimation(currentTime);
+            currentTime++;
+            
+            // Stop animation only after displaying the final state
+            if (currentTime > totalTime) {
+                stopAnimation();
+                return;
+            }
+        }, animationSpeed);
+    }
+
+    function stopAnimation() {
+        isPlaying = false;
+        clearInterval(animationInterval);
+        document.getElementById('playBtn').innerHTML = '<i class="fas fa-play"></i> Resume';
+    }
+
+    function resetAnimation() {
+        stopAnimation();
+        currentTime = 0;
+        updateAnimation(0);
+        document.getElementById('playBtn').innerHTML = '<i class="fas fa-play"></i> Start';
+    }
+
+    function toggleProcessView() {
+        showAllProcesses = !showAllProcesses;
+        document.getElementById('expandBtn').innerHTML = showAllProcesses ? 
+            '<i class="fas fa-compress"></i> Show Fewer Processes' : 
+            '<i class="fas fa-expand"></i> Show All Processes';
+        
+        // Recreate animation with updated view setting
+        createAnimationChart();
+        updateAnimation(currentTime);
+    }
+    
+    function updateVisibleProcessCount(value) {
+        if (value === 'all') {
+            showAllProcesses = true;
+            maxVisibleProcesses = processes.length;
+        } else {
+            showAllProcesses = false;
+            maxVisibleProcesses = parseInt(value);
+        }
+        
+        // Update UI to reflect the change
+        document.getElementById('expandBtn').innerHTML = showAllProcesses ? 
+            '<i class="fas fa-compress"></i> Show Fewer Processes' : 
+            '<i class="fas fa-expand"></i> Show All Processes';
+        
+        // Recreate animation with updated view setting
+        createAnimationChart();
+        updateAnimation(currentTime);
+    }
+
+    // Generate a more vibrant, accessible color palette for processes
+    function generateDistinctColors(count) {
+        // HSL color wheel with good spacing and high saturation/luminance
+        const colors = [];
+        const hueStep = 360 / count;
+        
+        for (let i = 0; i < count; i++) {
+            const hue = (i * hueStep) % 360;
+            const saturation = 85 + (i % 3) * 5; // High saturation with slight variation
+            const lightness = 55 + (i % 4) * 3;  // Medium-high lightness with variation
+            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        }
+        
+        return colors;
+    }
+
+    // Initialize visualizations
+    window.addEventListener('load', () => {
+        // Adjust timeScale based on total time for better visualization
+        if (totalTime > 30) {
+            timeScale = Math.max(20, Math.floor(1000 / totalTime));
+        }
+        
+        // Generate distinct colors for all processes
+        const processCount = processes.length;
+        
+        // Override pidToColor with more distinct colors if needed
+        if (processCount > 8) {
+            const distinctColors = generateDistinctColors(processCount);
+            processes.forEach((proc, index) => {
+                pidToColor[proc.pid] = distinctColors[index % distinctColors.length];
+            });
+        }
+        
+        // Default to showing all processes if there are 12 or fewer
+        if (processes.length <= maxVisibleProcesses) {
+            showAllProcesses = true;
+        }
+        
+        createGanttChart();
+        createAnimationChart();
+        
+        // Set up animation controls
+        document.getElementById('playBtn').addEventListener('click', () => {
+            isPlaying ? stopAnimation() : startAnimation();
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', resetAnimation);
+        
+        document.getElementById('expandBtn').addEventListener('click', toggleProcessView);
+        
+        // Process count selection dropdown
+        document.getElementById('visibleProcessSelect').addEventListener('change', (e) => {
+            updateVisibleProcessCount(e.target.value);
+        });
+        
+        // Speed control
+        document.getElementById('speedRange').addEventListener('input', (e) => {
+            animationSpeed = 1100 - e.target.value; // Invert so higher value = faster
+            if (isPlaying) {
+                stopAnimation();
+                startAnimation();
+            }
+        });
+        
+        // Update total time display
+        document.getElementById('totalTimeDisplay').textContent = totalTime;
+        
+        // Initialize animation to time 0
+        updateAnimation(0);
+    });
 </script>
 
+<style>
+    /* Animation elements */
+    .process-indicator {
+        font-size: 1.2rem;
+        transition: left 0.5s linear, opacity 0.3s ease, transform 0.3s ease;
+        z-index: 20;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .process-active {
+        animation: process-pulse 0.5s ease;
+        border: 2px solid #fff;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    .process-segment {
+        height: 100%;
+        min-width: 4px;
+        opacity: 0.4;
+        transition: opacity 0.3s ease;
+        border-radius: 3px;
+    }
+    
+    .segment-active {
+        opacity: 0.9;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8) inset;
+    }
+
+    #currentTimeIndicator {
+        box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+        pointer-events: none;
+    }
+
+    @keyframes process-pulse {
+        0% { transform: translateY(-50%) scale(1); filter: brightness(100%); }
+        50% { transform: translateY(-50%) scale(1.3); filter: brightness(130%); }
+        100% { transform: translateY(-50%) scale(1); filter: brightness(100%); }
+    }
+
+    #ganttContainer, #animationContainer {
+        min-height: 200px;
+        background-color: #f8fafc;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        overflow-x: auto;
+    }
+    
+    /* Timeline grid pattern */
+    .process-track {
+        background: repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 49px,
+            #e2e8f0 50px,
+            #e2e8f0 51px
+        );
+    }
+    
+    /* Table styles */
+    .process-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+    }
+    .process-table th, .process-table td {
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+    .process-table th {
+        background-color: #f5f5f5;
+    }
+    
+    /* Time markers */
+    .time-markers {
+        background-color: rgba(248, 250, 252, 0.7);
+        padding-top: 5px;
+    }
+    
+    /* Animation container */
+    #animationContainer {
+        border: 1px solid #e2e8f0;
+    }
+</style>
 {% endblock %}

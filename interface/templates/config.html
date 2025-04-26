@@ -1,192 +1,249 @@
 {% extends "base.html" %}
 {% block content %}
-
-<style>
-    html,body{height:100%;margin:0;}
-  
-    /* back-button ----------------------------------------------------------- */
-    .back-btn{
-        position:absolute;   /* out of the card flow */
-        top:20px; left:20px;
-        background:#333; color:#fff;
-        border:none; border-radius:4px;
-        padding:6px 10px;
-        font-size:1rem;
-        cursor:pointer;
-        display:flex; align-items:center; gap:4px;
-    }
-    .back-btn:hover{background:#222;}
-  
-    /* page background */
-    .cfg-wrapper{
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        height:100vh;
-        background:radial-gradient(circle at 1px 1px,#d9d9d9 1px,#f4f4f4 0);
-        background-size:16px 16px;
-        position:relative;   /* so back-button's absolute coords are scoped */
-    }
-  
-    /* central card */
-    .cfg-box{
-        background:#fff;
-        padding:3rem 4rem;
-        border-radius:8px;
-        box-shadow:0 6px 18px rgba(0,0,0,.08);
-        width:100%; max-width:720px;
-    }
-  
-    h1.title{color:#222;font-weight:600;text-align:center;}
-    h2.subtitle{color:#555;font-weight:400;text-align:center;margin-bottom:2rem;}
-  
-    .button.is-dark-grey{background:#333;border-color:#333;color:#fff;}
-    .button.is-dark-grey:hover{background:#222;border-color:#222;}
-  
-    #procTbl input{font-size:.85rem;padding:.35rem .5rem;}
-  </style>
-
-<div class="cfg-wrapper">
-
-     <!-- ─── back button (snippet 1) ───────────────────────────────────────── -->
-  <form action="{{ url_for('welcome') }}" method="get">
-    <button class="back-btn">
-       ‹ <span style="line-height:1">Back</span>
-    </button>
- </form>
-  <div class="cfg-box">
-
-    <h1 class="title">Hi {{session.username}}!</h1>
-    <h2 class="subtitle">Configure your simulation</h2>
-
-    <form id="cfgForm" method="post">
-
-      <!-- Algorithm dropdown -->
-      <div class="field">
-        <label class="label">Algorithm</label>
-        <div class="select is-fullwidth">
-          <select name="algorithm" id="algoSel" onchange="toggleExtra()">
-            {% for key,(name,_,needP,needQ) in algos.items() %}
-              <option value="{{key}}"
-                      data-needprio="{{needP}}"
-                      data-needq="{{needQ}}">
-                  {{name}}
-              </option>
-            {% endfor %}
-          </select>
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Configure Simulation</h1>
+            <p class="text-gray-600">Set up your processes and choose a scheduling algorithm</p>
         </div>
-      </div>
-
-      <!-- Quantum / context-switch -->
-      <div id="qBox"  class="field is-hidden">
-        <label class="label">Time quantum</label>
-        <input class="input" type="number" name="quantum" value="4" min="1">
-      </div>
-      <div id="ctxBox" class="field is-hidden">
-        <label class="label">Context-switch time</label>
-        <input class="input" type="number" name="ctx" value="0" min="0">
-      </div>
-
-      <!-- Processes table -->
-      <h3 class="subtitle is-6" style="text-align:left;">Processes</h3>
-      <table class="table is-striped is-fullwidth" id="procTbl">
-        <thead>
-          <tr>
-            <th>PID</th><th>Arrival</th><th>Burst</th>
-            <th class="prioCol">Priority</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <button type="button"
-              class="button is-dark-grey mb-4"
-              onclick="addRow()">＋ Add process</button>
-
-      <input type="hidden" name="proc_json" id="procJson">
-
-      <div class="has-text-centered">
-        <button class="button is-dark-grey is-medium">
-          View results ▶
-        </button>
-      </div>
-    </form>
-  </div>
+        
+        <form id="configForm" method="POST" action="/config">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                    <h2 class="text-xl font-semibold text-white">Algorithm Selection</h2>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Scheduling Algorithm</label>
+                            <select id="algorithm" name="algorithm" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                {% for key, (name, _, need_prio, need_quantum) in algos.items() %}
+                                <option value="{{ key }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div id="quantumContainer" class="hidden">
+                            <label for="quantum" class="block text-sm font-medium text-gray-700 mb-1">Time Quantum</label>
+                            <input type="number" id="quantum" name="quantum" value="2" min="1" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div id="contextSwitchContainer" class="hidden">
+                            <label for="ctx" class="block text-sm font-medium text-gray-700 mb-1">Context Switch Time</label>
+                            <input type="number" id="ctx" name="ctx" value="0" min="0" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+                <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-xl font-semibold text-white">Process Configuration</h2>
+                    <button type="button" id="addProcessBtn" class="bg-white text-green-600 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors flex items-center">
+                        <i class="fas fa-plus mr-2"></i> Add Process
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700">
+                                    <th class="py-3 px-4 text-left">PID</th>
+                                    <th class="py-3 px-4 text-left">Arrival Time</th>
+                                    <th class="py-3 px-4 text-left">Burst Time</th>
+                                    <th class="py-3 px-4 text-left priority-col">Priority</th>
+                                    <th class="py-3 px-4 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="processTableBody">
+                                <!-- Process rows will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="noProcessesMsg" class="text-center py-4 text-gray-500">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        No processes added yet. Click "Add Process" to get started.
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" id="proc_json" name="proc_json" value="[]">
+            
+            <div class="flex justify-end space-x-4">
+                <button type="button" id="resetBtn" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-redo mr-2"></i> Reset
+                </button>
+                <button type="submit" id="submitBtn" class="btn-primary px-8 py-3 rounded-lg font-medium text-lg flex items-center space-x-2 disabled:opacity-50" disabled>
+                    <span>Run Simulation</span>
+                    <i class="fas fa-play ml-2"></i>
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
-<script>
-    let pid = 1;
-    addRow();                        // initial row
-    
-    function needsPriority(){
-      const opt = document.querySelector('#algoSel').selectedOptions[0];
-      return opt.dataset.needprio === 'True';
-    }
-    function needsQuantum(){
-      const opt = document.querySelector('#algoSel').selectedOptions[0];
-      return opt.dataset.needq === 'True';
-    }
-    
-    /* ---------- row helpers ------------------------------------------------- */
-    function addPriorityCell(tr){
-      if (tr.querySelector('.pri')) return;          // already has one
-      const td = document.createElement('td');
-      td.className = 'prioCol';
-      td.innerHTML = `<input class="input pri" type="number" min="0" value="0">`;
-      tr.appendChild(td);
-    }
-    function removePriorityCell(tr){
-      const cell = tr.querySelector('.prioCol');
-      if (cell) cell.remove();
-    }
-    
-    function addRow(){
-      const t = document.querySelector('#procTbl tbody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-          <td>${pid}</td>
-          <td><input class="input arr" type="number" min="0" value="0"></td>
-          <td><input class="input bur" type="number" min="1" value="1"></td>`;
-      if (needsPriority()) addPriorityCell(tr);
-      t.appendChild(tr);
-      pid++;
-    }
-    
-    /* ---------- toggle extra UI -------------------------------------------- */
-    function toggleExtra(){
-      const needP = needsPriority();
-      const needQ = needsQuantum();
-    
-      // quantum / ctx boxes
-      document.getElementById('qBox').classList.toggle('is-hidden', !needQ);
-      document.getElementById('ctxBox').classList.toggle(
-            'is-hidden',
-            !(needQ && document.getElementById('algoSel').value.startsWith('prio')));
-    
-      // adjust existing rows
-      document.querySelectorAll('#procTbl tbody tr').forEach(tr=>{
-          needP ? addPriorityCell(tr) : removePriorityCell(tr);
-      });
-    
-      // show/hide header cell
-      document.querySelectorAll('.prioCol, thead .prioCol').forEach(
-            el => el.style.display = needP ? 'table-cell' : 'none');
-    }
-    toggleExtra();      // run once for initial state
-    
-    /* ---------- submit: collect rows --------------------------------------- */
-    document.getElementById('cfgForm').addEventListener('submit', e=>{
-      const rows = [...document.querySelectorAll('#procTbl tbody tr')];
-      const procs = rows.map(r=>({
-          pid: parseInt(r.children[0].innerText),
-          arrival_time: +r.querySelector('.arr').value,
-          burst_time:   +r.querySelector('.bur').value,
-          priority:     +((r.querySelector('.pri')||{}).value || 0)
-      }));
-      document.getElementById('procJson').value = JSON.stringify(procs);
-    });
-    </script>
-    
-    
+{% endblock %}
 
+{% block scripts %}
+<script>
+    // Store processes
+    let processes = [];
+    let nextPid = 1;
+    
+    // DOM elements
+    const algorithmSelect = document.getElementById('algorithm');
+    const quantumContainer = document.getElementById('quantumContainer');
+    const contextSwitchContainer = document.getElementById('contextSwitchContainer');
+    const priorityCol = document.querySelectorAll('.priority-col');
+    const processTableBody = document.getElementById('processTableBody');
+    const noProcessesMsg = document.getElementById('noProcessesMsg');
+    const procJsonInput = document.getElementById('proc_json');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Algorithm data
+    const algorithmData = {
+        {% for key, (name, _, need_prio, need_q) in algos.items() %}
+        "{{ key }}": { needsPriority: {{ "true" if need_prio else "false" }}, needsQuantum: {{ "true" if need_q else "false" }} },
+        {% endfor %}
+    };
+    
+    // Initial process
+    addProcess();
+    
+    // Event listeners
+    document.getElementById('addProcessBtn').addEventListener('click', addProcess);
+    document.getElementById('resetBtn').addEventListener('click', resetForm);
+    algorithmSelect.addEventListener('change', updateFormForAlgorithm);
+    
+    // Initialize form based on selected algorithm
+    updateFormForAlgorithm();
+    
+    // Function to add a new process
+    function addProcess() {
+        const pid = nextPid++;
+        const needsPriority = algorithmData[algorithmSelect.value].needsPriority;
+        
+        const process = {
+            pid: pid,
+            arrival_time: 0,
+            burst_time: 5,
+            priority: needsPriority ? 0 : undefined
+        };
+        
+        processes.push(process);
+        renderProcessTable();
+        updateProcJson();
+    }
+    
+    // Function to remove a process
+    function removeProcess(pid) {
+        processes = processes.filter(p => p.pid !== pid);
+        renderProcessTable();
+        updateProcJson();
+    }
+    
+    // Function to update process values
+    function updateProcess(pid, field, value) {
+        const process = processes.find(p => p.pid === pid);
+        if (process) {
+            process[field] = parseInt(value, 10) || 0;
+            updateProcJson();
+        }
+    }
+    
+    // Function to render the process table
+    function renderProcessTable() {
+        processTableBody.innerHTML = '';
+        
+        if (processes.length === 0) {
+            noProcessesMsg.classList.remove('hidden');
+            submitBtn.disabled = true;
+            return;
+        }
+        
+        noProcessesMsg.classList.add('hidden');
+        submitBtn.disabled = false;
+        
+        const needsPriority = algorithmData[algorithmSelect.value].needsPriority;
+        priorityCol.forEach(col => {
+            col.classList.toggle('hidden', !needsPriority);
+        });
+        
+        processes.forEach(process => {
+            const row = document.createElement('tr');
+            row.className = 'border-b hover:bg-gray-50';
+            
+            row.innerHTML = `
+                <td class="py-3 px-4">${process.pid}</td>
+                <td class="py-3 px-4">
+                    <input type="number" min="0" value="${process.arrival_time}" 
+                           class="w-20 px-2 py-1 border border-gray-300 rounded"
+                           onchange="updateProcess(${process.pid}, 'arrival_time', this.value)">
+                </td>
+                <td class="py-3 px-4">
+                    <input type="number" min="1" value="${process.burst_time}" 
+                           class="w-20 px-2 py-1 border border-gray-300 rounded"
+                           onchange="updateProcess(${process.pid}, 'burst_time', this.value)">
+                </td>
+                <td class="py-3 px-4 ${needsPriority ? '' : 'hidden'}">
+                    <input type="number" min="0" value="${process.priority || 0}" 
+                           class="w-20 px-2 py-1 border border-gray-300 rounded"
+                           onchange="updateProcess(${process.pid}, 'priority', this.value)">
+                </td>
+                <td class="py-3 px-4">
+                    <button type="button" class="text-red-500 hover:text-red-700" onclick="removeProcess(${process.pid})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            processTableBody.appendChild(row);
+        });
+    }
+    
+    // Function to update the hidden JSON input
+    function updateProcJson() {
+        procJsonInput.value = JSON.stringify(processes);
+    }
+    
+    // Function to update form fields based on selected algorithm
+    function updateFormForAlgorithm() {
+        const algorithmKey = algorithmSelect.value;
+        const { needsQuantum, needsPriority } = algorithmData[algorithmKey];
+        
+        quantumContainer.classList.toggle('hidden', !needsQuantum);
+        contextSwitchContainer.classList.toggle('hidden', !(needsQuantum && algorithmKey.includes('prio')));
+        
+        // Update priority columns
+        priorityCol.forEach(col => {
+            col.classList.toggle('hidden', !needsPriority);
+        });
+        
+        // Make sure all processes have priority if needed
+        if (needsPriority) {
+            processes.forEach(process => {
+                if (process.priority === undefined) {
+                    process.priority = 0;
+                }
+            });
+        }
+        
+        renderProcessTable();
+    }
+    
+    // Function to reset the form
+    function resetForm() {
+        processes = [];
+        nextPid = 1;
+        addProcess();
+        
+        document.getElementById('quantum').value = 2;
+        document.getElementById('ctx').value = 0;
+    }
+</script>
 {% endblock %}
