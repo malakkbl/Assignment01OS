@@ -4,9 +4,8 @@ from process import Process
 
 
 def round_robin(processes: List[Process],
-                quantum: int = 4,
-                context_switch: int = 0
-               ) -> Tuple[List[Process], List[dict], dict]:
+                quantum: int = 4
+               ):
 
     # Sort the processes in chronological order of arrival time
     processes = sorted(processes, key=lambda p: p.arrival_time)
@@ -49,22 +48,18 @@ def round_robin(processes: List[Process],
             'finish': clock     # end of this slice
         })
 
-        # In case the process is not finished , we add the context switch time then add it back to the queue
         if current.remaining_time > 0:
-            clock += context_switch
+            # not completed 
+            while processes and processes[0].arrival_time <= clock:
+                ready_q.append(processes.pop(0))
+            ready_q.append(current)
         else:
             # completed
             current.completion_time = clock
             current.turnaround_time = clock - current.arrival_time
             current.waiting_time    = current.turnaround_time - current.burst_time
             completed.append(current)
-
-        # The case where the process is not finished
-        if current.remaining_time > 0:
-            # new arrivals may have appeared during the run-time
-            while processes and processes[0].arrival_time <= clock:
-                ready_q.append(processes.pop(0))
-            ready_q.append(current)
+            
 
     # Compute average stats for all the algorithm
     n         = len(completed)

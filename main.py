@@ -22,14 +22,14 @@ def choose_algorithm():
         print("\nSelect the scheduling algorithm:")
         for k, (name, _) in algos.items():
             print(f"  {k}) {name}")
-        choice = input("Your choice ➜ ").strip()
+        choice = input("Your choice : ").strip()
         if choice in algos:
             return algos[choice]
         print("⚠️  Invalid option – try again.")
 
 
 # ------------- DATA ENTRY --------------
-def read_processes(need_priority: bool):
+def read_processes(need_priority: bool = False):
     """
     Interactively build a list of Process objects.
     PIDs are auto-generated as 1, 2, 3, … (no user input).
@@ -54,8 +54,6 @@ def read_processes(need_priority: bool):
             processes.append(Process(i, arrival, burst, prio))
         else:
             processes.append(Process(i, arrival, burst))
-
-
 
     return processes
 
@@ -83,13 +81,6 @@ def print_schedule(tbl):
         for r in tbl
         if r['turnaround'] is not None
     }
-    num_procs = len(tat_per_pid)
-    total_tat = sum(tat_per_pid.values())
-    avg_tat   = total_tat / num_procs if num_procs else 0
-
-    print("\nSummary:")
-    print(f"  Makespan       : {makespan}")
-    print(f"  Avg. turnaround: {avg_tat:.2f}")
 
 
 
@@ -99,10 +90,23 @@ def main():
     algo_name, algo_fn = choose_algorithm()
     need_priority      = "Priority" in algo_name          # ask for priority only when needed
     processes          = read_processes(need_priority)
-    schedule_table     = algo_fn(processes)
+    if "Round-Robin" in algo_name:
+        quantum = int(input("  Time quantum: "))
+        list_processes , schedule_table , my_dict = algo_fn(processes, quantum)
+    else:
+        list_processes , schedule_table , my_dict  = algo_fn(processes)
+    print(f"\nUsing {algo_name} algorithm")
     print_schedule(schedule_table)
+    print("\nProcess statistics:")
+    for proc in list_processes:
+        print(f"  PID {proc.pid}: "
+              f"Waiting time = {proc.waiting_time}, "
+              f"Turnaround time = {proc.turnaround_time}, "
+              f"Completion time = {proc.completion_time}")
+    print("\nMetrics:")
+    for key, value in my_dict.items():
+        print(f"  {key.replace('_', ' ').title()}: {value:.2f}")
 
 
 if __name__ == "__main__":
     main()
-# ───────────────────────────────────────
