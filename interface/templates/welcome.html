@@ -1,20 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero is-light">
-  <div class="hero-body">
-    <p class="title">Hello there 👋</p>
-    <p class="subtitle">Enter your name to get started</p>
+
+<style>
+    /* Remove default browser margin so 100 vh really fills the screen */
+  html, body { height:100%; margin:0; }
+
+  /* ─── Page background: subtle dotted pattern ───────────────────────────── */
+  .welcome-wrapper{
+      display:flex;
+      align-items:center;          /* vertical centering */
+      justify-content:center;      /* horizontal centering */
+      height:100vh;                /* exactly full viewport, no extra */
+      background: radial-gradient(circle at 1px 1px, #d9d9d9 1px, #f4f4f4 0px);
+      background-size:16px 16px;
+      overflow:hidden;             /* guard against faint overflow */
+  }
+  
+    /* ─── Central card ─────────────────────────────────────────────────────── */
+    .welcome-box{
+        text-align:center;
+        background:#fff;
+        padding:3rem 4rem;
+        border-radius:8px;
+        box-shadow:0 6px 18px rgba(0,0,0,.08);
+        width:100%;
+        max-width:560px;            /* ⬅️  wider than before (was 420) */
+    }
+  
+    /* ─── Typography & button palette ─────────────────────────────────────── */
+    h1.title{
+        color:#222;
+        font-weight:600;
+        word-break:keep-all;        /* prevent mid-word split */
+    }
+    h2.subtitle{ color:#555; font-weight:400; }
+  
+    .button.is-dark-grey{
+        background:#333;
+        border-color:#333;
+        color:#fff;
+    }
+    .button.is-dark-grey:hover{
+        background:#222;
+        border-color:#222;
+    }
+  </style>
+  
+
+<div class="welcome-wrapper">
+  <div class="welcome-box">
+    <h1 class="title is-3">Welcome to<br>CPU&nbsp;Scheduler&nbsp;Simulator</h1>
+    <h2 class="subtitle is-6">Enter your name to get started</h2>
 
     <form method="post">
-      <div class="field has-addons">
-        <div class="control is-expanded">
-          <input class="input" type="text" name="username" placeholder="Your name" required>
-        </div>
+      <div class="field">
         <div class="control">
-          <button class="button is-primary">Get started</button>
+          <input class="input is-medium"
+                 type="text"
+                 name="username"
+                 placeholder="Your name"
+                 required>
         </div>
       </div>
+
+      <button class="button is-dark-grey is-medium mt-3">
+        Get started
+      </button>
     </form>
   </div>
-</section>
+</div>
+
 {% endblock %}
