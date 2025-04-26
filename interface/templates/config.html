@@ -1,75 +1,192 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="title">Hi {{session.username}}!</h1>
-<h2 class="subtitle">Configure your simulation</h2>
 
-<form id="cfgForm" method="post">
-  <!-- Algorithm dropdown -->
-  <div class="field">
-    <label class="label">Algorithm</label>
-    <div class="select">
-      <select name="algorithm" id="algoSel" onchange="toggleExtra()">
-        {% for key,(name,_,needP,needQ) in algos.items() %}
-          <option value="{{key}}" data-needprio="{{needP}}" data-needq="{{needQ}}">
-              {{name}}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-  </div>
+<style>
+    html,body{height:100%;margin:0;}
+  
+    /* back-button ----------------------------------------------------------- */
+    .back-btn{
+        position:absolute;   /* out of the card flow */
+        top:20px; left:20px;
+        background:#333; color:#fff;
+        border:none; border-radius:4px;
+        padding:6px 10px;
+        font-size:1rem;
+        cursor:pointer;
+        display:flex; align-items:center; gap:4px;
+    }
+    .back-btn:hover{background:#222;}
+  
+    /* page background */
+    .cfg-wrapper{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        height:100vh;
+        background:radial-gradient(circle at 1px 1px,#d9d9d9 1px,#f4f4f4 0);
+        background-size:16px 16px;
+        position:relative;   /* so back-button's absolute coords are scoped */
+    }
+  
+    /* central card */
+    .cfg-box{
+        background:#fff;
+        padding:3rem 4rem;
+        border-radius:8px;
+        box-shadow:0 6px 18px rgba(0,0,0,.08);
+        width:100%; max-width:720px;
+    }
+  
+    h1.title{color:#222;font-weight:600;text-align:center;}
+    h2.subtitle{color:#555;font-weight:400;text-align:center;margin-bottom:2rem;}
+  
+    .button.is-dark-grey{background:#333;border-color:#333;color:#fff;}
+    .button.is-dark-grey:hover{background:#222;border-color:#222;}
+  
+    #procTbl input{font-size:.85rem;padding:.35rem .5rem;}
+  </style>
 
-  <!-- Quantum / context-switch inputs -->
-  <div id="qBox" class="field is-hidden">
-    <label class="label">Time quantum</label>
-    <input class="input" type="number" name="quantum" value="4" min="1">
-  </div>
-  <div id="ctxBox" class="field is-hidden">
-    <label class="label">Context-switch time</label>
-    <input class="input" type="number" name="ctx" value="0" min="0">
-  </div>
+<div class="cfg-wrapper">
 
-  <!-- Processes table -->
-  <h3 class="subtitle">Processes</h3>
-  <table class="table is-striped" id="procTbl">
-    <thead>
-      <tr><th>PID</th><th>Arrival</th><th>Burst</th><th class="prioCol">Priority</th></tr>
-    </thead><tbody></tbody>
-  </table>
-  <button type="button" class="button" onclick="addRow()">＋ Add process</button>
-  <input type="hidden" name="proc_json" id="procJson">
-  <br><br>
-  <button class="button is-primary">View results ▶️</button>
-</form>
+     <!-- ─── back button (snippet 1) ───────────────────────────────────────── -->
+  <form action="{{ url_for('welcome') }}" method="get">
+    <button class="back-btn">
+       ‹ <span style="line-height:1">Back</span>
+    </button>
+ </form>
+  <div class="cfg-box">
+
+    <h1 class="title">Hi {{session.username}}!</h1>
+    <h2 class="subtitle">Configure your simulation</h2>
+
+    <form id="cfgForm" method="post">
+
+      <!-- Algorithm dropdown -->
+      <div class="field">
+        <label class="label">Algorithm</label>
+        <div class="select is-fullwidth">
+          <select name="algorithm" id="algoSel" onchange="toggleExtra()">
+            {% for key,(name,_,needP,needQ) in algos.items() %}
+              <option value="{{key}}"
+                      data-needprio="{{needP}}"
+                      data-needq="{{needQ}}">
+                  {{name}}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Quantum / context-switch -->
+      <div id="qBox"  class="field is-hidden">
+        <label class="label">Time quantum</label>
+        <input class="input" type="number" name="quantum" value="4" min="1">
+      </div>
+      <div id="ctxBox" class="field is-hidden">
+        <label class="label">Context-switch time</label>
+        <input class="input" type="number" name="ctx" value="0" min="0">
+      </div>
+
+      <!-- Processes table -->
+      <h3 class="subtitle is-6" style="text-align:left;">Processes</h3>
+      <table class="table is-striped is-fullwidth" id="procTbl">
+        <thead>
+          <tr>
+            <th>PID</th><th>Arrival</th><th>Burst</th>
+            <th class="prioCol">Priority</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <button type="button"
+              class="button is-dark-grey mb-4"
+              onclick="addRow()">＋ Add process</button>
+
+      <input type="hidden" name="proc_json" id="procJson">
+
+      <div class="has-text-centered">
+        <button class="button is-dark-grey is-medium">
+          View results ▶
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script>
-let pid=1; addRow();
-function addRow(){
-  const t=document.querySelector('#procTbl tbody');
-  t.insertAdjacentHTML('beforeend',`
-    <tr>
-      <td>${pid}</td>
-      <td><input class="input arr"  type="number" min="0" value="0"></td>
-      <td><input class="input bur"  type="number" min="1" value="1"></td>
-      <td class="prioCol"><input class="input pri" type="number" min="0" value="0"></td>
-    </tr>`); pid++;
-}
-function toggleExtra(){
-  const opt=document.querySelector('#algoSel').selectedOptions[0];
-  const needQ=opt.dataset.needq==="True", needP=opt.dataset.needprio==="True";
-  document.getElementById('qBox').classList.toggle('is-hidden',!needQ);
-  document.getElementById('ctxBox').classList.toggle('is-hidden',!(needQ && opt.value.startsWith('prio')));
-  document.querySelectorAll('.prioCol').forEach(el=>el.style.display=needP?'table-cell':'none');
-}
-toggleExtra();
-document.getElementById('cfgForm').addEventListener('submit',e=>{
-  const rows=[...document.querySelectorAll('#procTbl tbody tr')];
-  const procs=rows.map(r=>({
-      pid:parseInt(r.children[0].innerText),
-      arrival_time:+r.querySelector('.arr').value,
-      burst_time:+r.querySelector('.bur').value,
-      priority:+(r.querySelector('.pri')?.value||0)
-  }));
-  document.getElementById('procJson').value=JSON.stringify(procs);
-});
-</script>
+    let pid = 1;
+    addRow();                        // initial row
+    
+    function needsPriority(){
+      const opt = document.querySelector('#algoSel').selectedOptions[0];
+      return opt.dataset.needprio === 'True';
+    }
+    function needsQuantum(){
+      const opt = document.querySelector('#algoSel').selectedOptions[0];
+      return opt.dataset.needq === 'True';
+    }
+    
+    /* ---------- row helpers ------------------------------------------------- */
+    function addPriorityCell(tr){
+      if (tr.querySelector('.pri')) return;          // already has one
+      const td = document.createElement('td');
+      td.className = 'prioCol';
+      td.innerHTML = `<input class="input pri" type="number" min="0" value="0">`;
+      tr.appendChild(td);
+    }
+    function removePriorityCell(tr){
+      const cell = tr.querySelector('.prioCol');
+      if (cell) cell.remove();
+    }
+    
+    function addRow(){
+      const t = document.querySelector('#procTbl tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+          <td>${pid}</td>
+          <td><input class="input arr" type="number" min="0" value="0"></td>
+          <td><input class="input bur" type="number" min="1" value="1"></td>`;
+      if (needsPriority()) addPriorityCell(tr);
+      t.appendChild(tr);
+      pid++;
+    }
+    
+    /* ---------- toggle extra UI -------------------------------------------- */
+    function toggleExtra(){
+      const needP = needsPriority();
+      const needQ = needsQuantum();
+    
+      // quantum / ctx boxes
+      document.getElementById('qBox').classList.toggle('is-hidden', !needQ);
+      document.getElementById('ctxBox').classList.toggle(
+            'is-hidden',
+            !(needQ && document.getElementById('algoSel').value.startsWith('prio')));
+    
+      // adjust existing rows
+      document.querySelectorAll('#procTbl tbody tr').forEach(tr=>{
+          needP ? addPriorityCell(tr) : removePriorityCell(tr);
+      });
+    
+      // show/hide header cell
+      document.querySelectorAll('.prioCol, thead .prioCol').forEach(
+            el => el.style.display = needP ? 'table-cell' : 'none');
+    }
+    toggleExtra();      // run once for initial state
+    
+    /* ---------- submit: collect rows --------------------------------------- */
+    document.getElementById('cfgForm').addEventListener('submit', e=>{
+      const rows = [...document.querySelectorAll('#procTbl tbody tr')];
+      const procs = rows.map(r=>({
+          pid: parseInt(r.children[0].innerText),
+          arrival_time: +r.querySelector('.arr').value,
+          burst_time:   +r.querySelector('.bur').value,
+          priority:     +((r.querySelector('.pri')||{}).value || 0)
+      }));
+      document.getElementById('procJson').value = JSON.stringify(procs);
+    });
+    </script>
+    
+    
+
 {% endblock %}
