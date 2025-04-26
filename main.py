@@ -1,4 +1,3 @@
-# Main program to run the simulation
 from process import Process
 from algorithms.fcfs import fcfs_schedule
 from algorithms.priority_non_preemptive import priority_schedule
@@ -6,17 +5,16 @@ from algorithms.priority_preemptive import priority_preemptive_schedule
 from algorithms.sjf       import sjf               
 from algorithms.round_robin  import round_robin        
 
-
 # ---------------- MENU -----------------
 def choose_algorithm():
     """Return (algo_name, algo_function) chosen by the user."""
     algos = {
-    "1": ("FCFS",                       fcfs_schedule),
-    "2": ("Priority (non-preemptive)",  priority_schedule),
-    "3": ("Priority (preemptive)",      priority_preemptive_schedule),
-    "4": ("Shortest-Job-First (SJF)",   sjf),         
-    "5": ("Round-Robin",                round_robin), 
-}
+        "1": ("FCFS",                       fcfs_schedule),
+        "2": ("Priority (non-preemptive)",  priority_schedule),
+        "3": ("Priority (preemptive)",      priority_preemptive_schedule),
+        "4": ("Shortest-Job-First (SJF)",   sjf),         
+        "5": ("Round-Robin",                round_robin), 
+    }
 
     while True:
         print("\nSelect the scheduling algorithm:")
@@ -26,7 +24,6 @@ def choose_algorithm():
         if choice in algos:
             return algos[choice]
         print("⚠️  Invalid option – try again.")
-
 
 # ------------- DATA ENTRY --------------
 def read_processes(need_priority: bool = False):
@@ -39,8 +36,18 @@ def read_processes(need_priority: bool = False):
 
     for i in range(1, n + 1):
         print(f"\nProcess #{i}  (PID will be {i})")
-        arrival = int(input("  Arrival time: "))
-        burst   = int(input("  Burst  time : "))
+        # Validate arrival time
+        while True:
+            arrival = int(input("  Arrival time (>= 0): "))
+            if arrival >= 0:
+                break
+            print("⚠️  Arrival time cannot be negative. Please enter 0 or a positive integer.")
+        # Validate burst time
+        while True:
+            burst = int(input("  Burst time (>= 0): "))
+            if burst >= 0:
+                break
+            print("⚠️  Burst time cannot be negative. Please enter 0 or a positive integer.")
 
         if need_priority:
             # --- Priority with validation ---
@@ -57,7 +64,6 @@ def read_processes(need_priority: bool = False):
 
     return processes
 
-
 # ------------- REPORTING ---------------
 def print_schedule(tbl):
     """
@@ -72,17 +78,9 @@ def print_schedule(tbl):
         tat_disp = "Preempted" if row['turnaround'] is None else str(row['turnaround'])
         print(f"{row['pid']:<6}{row['start']:<8}{row['finish']:<8}{tat_disp}")
 
-        # ----- summary -----
+    # ----- old summary block reinstated -----
     makespan = max(r['finish'] for r in tbl) if tbl else 0
-
-    # collect final TATs (only rows that finished a process)
-    tat_per_pid = {
-        r['pid']: r['turnaround']
-        for r in tbl
-        if r['turnaround'] is not None
-    }
-
-
+    print(f"\nMakespan       : {makespan}")
 
 
 # --------------- DRIVER ----------------
@@ -90,23 +88,28 @@ def main():
     algo_name, algo_fn = choose_algorithm()
     need_priority      = "Priority" in algo_name          # ask for priority only when needed
     processes          = read_processes(need_priority)
+
     if "Round-Robin" in algo_name:
         quantum = int(input("  Time quantum: "))
-        list_processes , schedule_table , my_dict = algo_fn(processes, quantum)
+        list_processes, schedule_table, my_dict = algo_fn(processes, quantum)
     else:
-        list_processes , schedule_table , my_dict  = algo_fn(processes)
+        list_processes, schedule_table, my_dict = algo_fn(processes)
+
     print(f"\nUsing {algo_name} algorithm")
     print_schedule(schedule_table)
+
+    # --- process-by-process stats ---
     print("\nProcess statistics:")
     for proc in list_processes:
         print(f"  PID {proc.pid}: "
               f"Waiting time = {proc.waiting_time}, "
               f"Turnaround time = {proc.turnaround_time}, "
               f"Completion time = {proc.completion_time}")
+
+    # --- overall metrics ---
     print("\nMetrics:")
     for key, value in my_dict.items():
         print(f"  {key.replace('_', ' ').title()}: {value:.2f}")
-
 
 if __name__ == "__main__":
     main()

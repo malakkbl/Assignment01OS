@@ -1,5 +1,4 @@
 # priority_preemptive.py
-
 from process import Process
 from algorithms.utility_functions import (
     sort_by_arrival,      # helper: returns processes sorted by arrival_time
@@ -10,12 +9,11 @@ def priority_preemptive_schedule(process_list):
     """
     Preemptive priority scheduling (lower number = higher priority).
     If a newly arrived process has higher priority, it preempts the running one.
-    Returns a list of dicts with keys:
-      - 'pid'       : process ID
-      - 'start'     : segment start time
-      - 'finish'    : segment end time
-      - 'turnaround': total turnaround time for completed segments, None for preempted segments
-    Also sets each Process.turnaround_time when it fully completes.
+    Returns:
+        completed (List[Process]),
+        schedule (List[dict]): one per slice, keys pid, start, finish, turnaround
+        stats (dict): avg_waiting, avg_turnaround, avg_response, cpu_utilisation
+    Also sets each Process.turnaround_time & waiting_time on completion.
     """
     # 1) Sort all processes by arrival time so we can pop the earliest
     arrival = sort_by_arrival(process_list)
@@ -25,67 +23,63 @@ def priority_preemptive_schedule(process_list):
 
     # 3) schedule: will collect all execution segments
     schedule = []
+    completed      = []     # ← finished processes
+    idle_time      = 0      # ← total CPU idle time
+    first_response = {}     # ← record first CPU access per PID
 
     # 4) Initialize clock to first arrival (or 0 if no processes)
     current_time = init_current_time(arrival)
 
-    # 5) Track the currently running process and when it began its current segment
+    # 5) Track the currently running process and when its segment began
     current = None
     last_start = None
 
-    # 6) Loop until there are no arrivals left, no ready processes, and no running process
+    # 6) Loop until no arrivals, no ready, no running
     while arrival or ready or current:
-        # 6a) Enqueue any processes that have arrived by now
+        # 6a) Enqueue any processes that have arrived at current_time
         while arrival and arrival[0].arrival_time == current_time:
             p = arrival.pop(0)
-            # add to its priority list, creating one if necessary
-            if p.priority in ready:
-                ready[p.priority].append(p)
-            else:
-                ready[p.priority] = [p]
-
-            # if there's a running process and the newcomer outranks it...
+            ready.setdefault(p.priority, []).append(p)
+            # preempt if newcomer outranks current
             if current and p.priority < current.priority:
-                # record the segment up to preemption, with no turnaround
                 schedule.append({
                     'pid':       current.pid,
                     'start':     last_start,
                     'finish':    current_time,
                     'turnaround': None
                 })
-                # put the interrupted process back onto the front of its ready list
                 ready.setdefault(current.priority, []).insert(0, current)
                 current = None
 
-        # 6b) If CPU is free and someone is ready, dispatch the highest-priority process
+        # 6b) Dispatch if CPU idle
         if not current and ready:
-            # pick the lowest numeric key (= highest priority)
-            prio = min(ready.keys())
-            current = ready[prio].pop(0)  # FIFO within same priority
+            prio = min(ready)
+            current = ready[prio].pop(0)
             if not ready[prio]:
                 del ready[prio]
-            # mark when this new segment starts
             last_start = current_time
+            # record first response time
+            if current.pid not in first_response:
+                first_response[current.pid] = last_start - current.arrival_time
 
-        # 6c) If still idle, advance clock to next arrival
+        # 6c) If still idle, fast-forward to next arrival
         if not current:
             if arrival:
+                idle_time += arrival[0].arrival_time - current_time
                 current_time = arrival[0].arrival_time
             continue
 
-        # 6d) Decide next event: arrival or current finishing
+        # 6d) Compute next event: arrival vs. completion
         next_arrival = arrival[0].arrival_time if arrival else float('inf')
-        finish_time  = current_time + current.remaining_time
+        finish_time = current_time + current.remaining_time
 
         if next_arrival < finish_time:
-            # will be preempted at next_arrival
             run_dur = next_arrival - current_time
             current.remaining_time -= run_dur
             current_time = next_arrival
         else:
-            # run current to completion
+            # finish current
             current_time = finish_time
-            # record the final segment with actual turnaround
             turnaround = current_time - current.arrival_time
             schedule.append({
                 'pid':        current.pid,
@@ -93,12 +87,26 @@ def priority_preemptive_schedule(process_list):
                 'finish':     current_time,
                 'turnaround': turnaround
             })
-            # update the Process object’s turnaround_time
             current.turnaround_time = turnaround
+            current.waiting_time = turnaround - current.burst_time
+            completed.append(current)
             current = None
 
-    return schedule
+    # 7) Compute aggregate statistics
+    n = len(completed)
+    avg_wait = sum(p.waiting_time for p in completed) / n
+    avg_tat = sum(p.turnaround_time for p in completed) / n
+    avg_resp = sum(first_response[p.pid] for p in completed) / n
+    cpu_util = 100 * (current_time - idle_time) / current_time if current_time else 0
 
+    stats = {
+        "avg_waiting":     avg_wait,
+        "avg_turnaround":  avg_tat,
+        "avg_response":    avg_resp,
+        "cpu_utilisation": cpu_util
+    }
+
+    return completed, schedule, stats
 
 """# ───────── Example Usage ─────────
 if __name__ == '__main__':
