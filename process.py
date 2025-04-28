@@ -5,6 +5,9 @@ class Process:
         
         # Time when the process arrives and is ready to be scheduled
         self.arrival_time = arrival_time  
+        self.completion_time = 0
+        # Priority level (unused in FCFS; useful for priority scheduling later)
+        self.priority = priority 
         
         # Total CPU time required for the process to complete
         self.burst_time = burst_time  
@@ -14,11 +17,8 @@ class Process:
         
         # Turnaround time = completion_time - arrival_time (compute after the process finishes)
         self.turnaround_time = 0  
+    
         
-        # Priority level (unused in FCFS; useful for priority scheduling later)
-        self.priority = priority 
-        
-        self.completion_time = 0
         self.waiting_time = 0
 
     def __str__(self):

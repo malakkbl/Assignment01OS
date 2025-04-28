@@ -1,7 +1,8 @@
-from typing import List, Tuple
+from typing import List, Tuple # backward compatibility + static clarity
 from process import Process
 
 def sjf(processes: List[Process]):
+    # Simulates a non pre-emptive shortest-job-first CPU scheduler when supplied with a list of process objects. 
     """
     Non-pre-emptive Shortest Job First scheduler.
     Returns:
@@ -15,7 +16,7 @@ def sjf(processes: List[Process]):
 
     ready_q: List[Process] = []  # Stores the processes that are ready to run
     completed: List[Process] = []  # Stores the processes that have completed
-    schedule:  List[dict]    = []  # NEW  timeline (like your teammate’s)
+    schedule:  List[dict]    = []  # just to simulate a timeline for visualization purposes
 
     clock = 0  # The simulated time
     idle_time = 0  # Accumulates gaps when CPU is idle
@@ -26,14 +27,14 @@ def sjf(processes: List[Process]):
         while processes and processes[0].arrival_time <= clock:
             ready_q.append(processes.pop(0))
 
-        if not ready_q:          # CPU is idle > update our variables
+        if not ready_q:          # CPU is idle > we travel in time to the next arrival
             next_arrival = processes[0].arrival_time
             idle_time += next_arrival - clock
             clock = next_arrival
             continue
 
         #  Choose the next process to run from the ready queue
-        ready_q.sort(key=lambda p: p.burst_time)
+        ready_q.sort(key=lambda p: p.burst_time) # This is where the property of our algorithm appears
         current = ready_q.pop(0)
         
         #  Compute individual stats for the current process

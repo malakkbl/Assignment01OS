@@ -9,17 +9,17 @@ def round_robin(processes: List[Process],
 
     # Sort the processes in chronological order of arrival time
     processes = sorted(processes, key=lambda p: p.arrival_time)
-    ready_q   : deque[Process] = deque()
+    
+    ready_q   : deque[Process] = deque() # O(1) instead of O(n)
     completed : List[Process]  = []
-    schedule  : List[dict]     = []   # NEW timeline list  (one entry per slice)
+    schedule  : List[dict]     = []   # timeline
 
     clock          = 0
     idle_time      = 0
-    first_response = {}        # The first time the process accesses the CPU 
+    first_response = {}        # The first time the process accesses the CPU - arrival time
 
     while processes or ready_q:
         # In each iteration : move newly arrived jobs into ready_q + pick one ready process
-
         while processes and processes[0].arrival_time <= clock:
             ready_q.append(processes.pop(0))
 
@@ -41,7 +41,7 @@ def round_robin(processes: List[Process],
         clock   += run_time
         current.remaining_time -= run_time
 
-        # ---------- NEW ---------- store this CPU slice in the schedule
+        # Store the CPU slice in the schedule
         schedule.append({
             'pid':   current.pid,
             'start': start,
@@ -60,12 +60,17 @@ def round_robin(processes: List[Process],
             current.waiting_time    = current.turnaround_time - current.burst_time
             completed.append(current)
             
+            leftover = quantum - run_time        
+            if leftover > 0:
+                idle_time += leftover              
+                clock     += leftover
+            
 
     # Compute average stats for all the algorithm
     n         = len(completed)
     avg_wait  = sum(p.waiting_time    for p in completed) / n
     avg_tat   = sum(p.turnaround_time for p in completed) / n
-    avg_resp  = sum(first_response[p.pid] for p in completed) / n
+    avg_resp  = sum(first_response[p.pid] for p in completed) / n # To confirm that the chosen quantum is doing its job > we calculate it since the rr is for systems with interactive processes
     cpu_util  = 100 * (clock - idle_time) / clock
 
     return completed, schedule, {

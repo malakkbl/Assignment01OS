@@ -1,13 +1,10 @@
-# algorithms/priority_rr.py
 from collections import deque
 from typing import List, Dict, Tuple
 from process import Process
 
-
 def priority_round_robin(processes: List[Process],
-                         quantum: int = 4,
-                         context_switch: int = 0
-                        ) -> Tuple[List[Process], List[dict], Dict[str, float]]:
+                         quantum: int = 4
+                        ):
     """
     Multilevel-queue scheduler:
         • Lower numeric value  → higher priority
@@ -32,10 +29,9 @@ def priority_round_robin(processes: List[Process],
     current   = None      # running process
     slice_end = None      # when the current quantum expires
 
-    # Main loop
     while arrival or ready or current:
-
-        # ─── A. Move every process that has just arrived ────────────────────
+    # Run until no future arrivals , no ready queues , no running task
+        # Move every process that has just arrived
         while arrival and arrival[0].arrival_time <= clock:
             p = arrival.pop(0)
             ready.setdefault(p.priority, deque()).append(p)
@@ -54,7 +50,7 @@ def priority_round_robin(processes: List[Process],
                 ready.setdefault(current.priority, deque()).appendleft(current)
                 current = None
 
-        # ─── B. If CPU idle choose next ready process (highest priority) ────
+        # If CPU idle choose next ready process (highest priority)
         if not current and ready:
             prio      = min(ready.keys())          # smallest number wins
             current   = ready[prio].popleft()
@@ -68,14 +64,14 @@ def priority_round_robin(processes: List[Process],
 
             slice_end = clock + min(quantum, current.remaining_time)
 
-        # ─── C. If still idle, fast-forward to next arrival ─────────────────
+        # If still idle, fast-forward to next arrival
         if not current:
             if arrival:
                 idle_time += arrival[0].arrival_time - clock
                 clock      = arrival[0].arrival_time
             continue
 
-        # ─── D. Decide the next “interesting” time instant ─────────────────
+        # Decide the next “interesting” time instant
         next_arr  = arrival[0].arrival_time if arrival else float('inf')
         next_tick = min(slice_end, next_arr)       # either slice expires or arrival happens
         run_time  = next_tick - clock
@@ -91,8 +87,6 @@ def priority_round_robin(processes: List[Process],
                 'finish': clock,
                 'turnaround': None
             })
-            # context-switch overhead
-            clock += context_switch
             # new arrivals may have shown up during the overhead
             while arrival and arrival[0].arrival_time <= clock:
                 p = arrival.pop(0)
@@ -115,11 +109,7 @@ def priority_round_robin(processes: List[Process],
             current.waiting_time    = current.turnaround_time - current.burst_time
             completed.append(current)
             current = None
-            # context-switch cost only if more work remains
-            if ready or arrival:
-                clock += context_switch
 
-    # ─── E. metrics ─────────────────────────────────────────────────────────
     n = len(completed)
     avg_wait = sum(p.waiting_time    for p in completed) / n
     avg_tat  = sum(p.turnaround_time for p in completed) / n
