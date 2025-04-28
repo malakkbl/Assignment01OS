@@ -132,7 +132,14 @@ def priority_round_robin(
             current.turnaround_time = turnaround
             current.waiting_time    = turnaround - current.burst_time
             completed.append(current)
+            
+            leftover = quantum - run_time        
+            if leftover > 0:
+                idle_time += leftover              
+                clock     += leftover
+                
             current = None
+            
 
     # 7)  Aggregate statistics
     n         = len(completed)
