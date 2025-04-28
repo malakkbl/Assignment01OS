@@ -42,9 +42,7 @@ def priority_round_robin(processes: List[Process],
                 schedule.append({
                     'pid':   current.pid,
                     'start': current.last_start,
-                    'finish': clock,
-                    'turnaround': None
-                })
+                    'finish': clock                })
                 current.remaining_time -= clock - current.last_start
                 # put the interrupted process at *head* of its queue
                 ready.setdefault(current.priority, deque()).appendleft(current)
