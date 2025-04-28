@@ -46,26 +46,23 @@ def priority_schedule(process_list: List[Process]):
                 ready[p.priority] = [p]
         
         # 6b) If CPU is free, dispatch the highest-priority process that has arrived
-        if not current and ready:
-            available = [
-                prio for prio, lst in ready.items()
-                if lst and lst[0].arrival_time <= current_time
-            ]
-            if available:
-                prio_to_run = min(available)
+        if  ready:
+                prio_to_run = min(ready)
                 current = ready[prio_to_run].pop(0)
                 if not ready[prio_to_run]:
-                    del ready[prio_to_run]
+                    del ready[prio_to_run]# after popping if the list is empty just remove it 
                 # record first response
                 if current.pid not in first_response:
                     first_response[current.pid] = current_time - current.arrival_time
         
-        # 6c) If still idle, advance clock to next arrival
+        # 6c) If still idle, advance clock to next arrival and break the loop
+        #and also that means that we passed all the processes that could have arrived 
+        # before the current time and didnt found any or they just werent on the ready list
         if not current:
             if arrival:
-                idle_time     += arrival[0].arrival_time - current_time
+                idle_time     += arrival[0].arrival_time - current_time# this is the only case where we would have idle time
                 current_time   = arrival[0].arrival_time
-            continue
+            continue 
         
         # 6d) Run the current process to completion (non-preemptive)
         start  = current_time
@@ -81,7 +78,6 @@ def priority_schedule(process_list: List[Process]):
             'pid':        current.pid,
             'start':      start,
             'finish':     finish,
-            'turnaround': turnaround
         })
         completed.append(current)
         
@@ -104,18 +100,3 @@ def priority_schedule(process_list: List[Process]):
     }
     
     return completed, schedule, stats
-
-
-"""# Example usage
-if __name__ == '__main__':
-    # Define test processes to illustrate behavior
-    p1 = Process('A', arrival_time=2,  burst_time=5, priority=1)  # higher priority than p2
-    p2 = Process('B', arrival_time=0,  burst_time=3, priority=2)
-    p3 = Process('C', arrival_time=4,  burst_time=0, priority=5)
-    p4 = Process('D', arrival_time=10, burst_time=2, priority=2)
-
-    procs = [p1, p2, p3, p4]
-    result = priority_schedule(procs)
-    for entry in result:
-        print(f"{entry['pid']} → {entry['start']}–{entry['finish']} (TAT={entry['turnaround']})")
-"""
