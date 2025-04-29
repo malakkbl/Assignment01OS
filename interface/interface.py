@@ -37,7 +37,9 @@ def config():
     if request.method == "POST":
         session["payload"] = request.form.to_dict()
         return redirect(url_for("run"))
-    return render_template("config.html", algos=algos)
+    return render_template("config.html",
+                           algos=algos,
+                           username=session["username"])
 
 @app.route("/run")
 def run():

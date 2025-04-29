@@ -8,12 +8,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
-            --primary: #3B82F6;
-            --primary-dark: #2563EB;
-            --secondary: #10B981;
-            --accent: #8B5CF6;
-            --background: #F3F4F6;
-            --foreground: #1F2937;
+            --primary: #2563EB;
+            --primary-light: #3B82F6;
+            --primary-dark: #1D4ED8;
+            --secondary: #0EA5E9;
+            --accent: #0284C7;
+            --background: #F8FAFC;
+            --foreground: #1E293B;
+            --gray-light: #E2E8F0;
+            --gray-medium: #94A3B8;
+            --gray-dark: #475569;
         }
         
         body {
@@ -31,33 +35,53 @@
         .btn-primary:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
         }
         
         .card {
             transition: all 0.3s ease;
+            border-radius: 1rem;
         }
         
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.1);
         }
         
-        /* CPU Animation */
-        @keyframes process-running {
+        /* Gradient Animations */
+        .gradient-blue {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+            background-size: 200% 200%;
+            animation: gradient-shift 8s ease infinite;
+        }
+        
+        .gradient-accent {
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            background-size: 200% 200%;
+            animation: gradient-shift 8s ease infinite;
+        }
+        
+        @keyframes gradient-shift {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
         
+        /* Process Animation */
         .process-active {
             background: linear-gradient(270deg, var(--secondary), var(--primary));
             background-size: 200% 200%;
             animation: process-running 2s ease infinite;
         }
         
+        @keyframes process-running {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
         .process-waiting {
-            background-color: #9CA3AF;
+            background-color: var(--gray-medium);
         }
         
         .process-completed {
@@ -65,13 +89,61 @@
         }
         
         /* Logo animation */
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
         }
         
         .logo-animate {
-            animation: pulse 3s ease-in-out infinite;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        /* Wave animation */
+        @keyframes wave {
+            0% { transform: rotate(0deg); }
+            10% { transform: rotate(14deg); }
+            20% { transform: rotate(-8deg); }
+            30% { transform: rotate(14deg); }
+            40% { transform: rotate(-4deg); }
+            50% { transform: rotate(10deg); }
+            60% { transform: rotate(0deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        .wave {
+            animation: wave 2.5s ease-in-out infinite;
+            transform-origin: 70% 70%;
+            display: inline-block;
+        }
+        
+        /* Subtle shine effect */
+        .shine {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to right, 
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.1) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: rotate(25deg);
+            animation: shine 6s ease-in-out infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(25deg); }
+            20% { transform: translateX(100%) rotate(25deg); }
+            100% { transform: translateX(100%) rotate(25deg); }
         }
     </style>
 </head>
@@ -79,18 +151,28 @@
     <div class="min-h-screen flex flex-col">
         <header class="bg-white shadow-md">
             <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-3">
                     <div class="text-3xl text-blue-600 logo-animate">
                         <i class="fas fa-microchip"></i>
                     </div>
                     <h1 class="text-xl font-bold text-gray-800">CPU Scheduler Simulator</h1>
                 </div>
                 <nav>
-                    <ul class="flex space-x-6">
-                        <li><a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a></li>
-                        <li><a href="/config" class="text-gray-600 hover:text-blue-600 transition-colors">Configure</a></li>
+                    <ul class="flex space-x-4">
+                        <li>
+                            <!-- pill-style button with icon, subtle shadow & smooth transition -->
+                            <a href="/"
+                               class="flex items-center gap-2 px-4 py-2 rounded-full
+                                      bg-gray-100 text-gray-600 shadow-sm
+                                      hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-600
+                                      hover:text-white transition-all duration-300">
+                                <i class="fas fa-home"></i>
+                                <span>Home</span>
+                            </a>
+                        </li>
                     </ul>
                 </nav>
+                
             </div>
         </header>
         
@@ -105,11 +187,8 @@
                         <p>&copy; 2025 CPU Scheduler Simulator</p>
                     </div>
                     <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <a href="https://github.com/malakkbl/Assignment01OS.git" class="text-gray-400 hover:text-white transition-colors">
                             <i class="fab fa-github"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                            <i class="fab fa-linkedin"></i>
                         </a>
                     </div>
                 </div>

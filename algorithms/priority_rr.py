@@ -105,19 +105,22 @@ def priority_round_robin(
                 'start' : last_start,
                 'finish': current_time
             })
-            # Enqueue arrivals that landed exactly at this tick
+            # Re-queue the current process BEFORE handling new arrivals
+            # This ensures that it gets properly placed in the queue before any new processes
+            if current.priority in ready:
+                ready[current.priority].append(current)
+            else:
+                ready[current.priority] = [current]
+            current = None
+            
+            # Now process arrivals that landed exactly at this tick
             while arrival and arrival[0].arrival_time <= current_time:
                 p = arrival.pop(0)
                 if p.priority in ready:
                     ready[p.priority].append(p)
                 else:
                     ready[p.priority] = [p]
-            # Push job to tail of its own queue
-            if current.priority in ready:
-                ready[current.priority].append(current)
-            else:
-                ready[current.priority] = [current]
-            current = None
+                    
             continue
 
         # 6f)  Job finished
@@ -132,14 +135,7 @@ def priority_round_robin(
             current.turnaround_time = turnaround
             current.waiting_time    = turnaround - current.burst_time
             completed.append(current)
-            
-            leftover = quantum - run_time        
-            if leftover > 0:
-                idle_time += leftover              
-                clock     += leftover
-                
             current = None
-            
 
     # 7)  Aggregate statistics
     n         = len(completed)

@@ -2,14 +2,28 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto">
+        <!-- Greeting section with waving hand -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8 card">
+            <div class="gradient-blue px-6 py-6 text-white flex items-center">
+                <div class="text-3xl mr-3">
+                    <span class="wave">👋</span>
+                </div>
+                <h2 class="text-2xl font-bold">Hello, <span id="username">{{ username }}</span>!</h2>
+            </div>
+            
+            <div class="p-6">
+                <p class="text-gray-600">Let's configure your CPU scheduling simulation. Choose your algorithm and set up processes below.</p>
+            </div>
+        </div>
+        
         <div class="mb-6">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Configure Simulation</h1>
             <p class="text-gray-600">Set up your processes and choose a scheduling algorithm</p>
         </div>
         
         <form id="configForm" method="POST" action="/config">
-            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-                <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8 card">
+                <div class="gradient-blue px-6 py-4">
                     <h2 class="text-xl font-semibold text-white">Algorithm Selection</h2>
                 </div>
                 
@@ -17,7 +31,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Scheduling Algorithm</label>
-                            <select id="algorithm" name="algorithm" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <select id="algorithm" name="algorithm" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all">
                                 {% for key, (name, _, need_prio, need_quantum) in algos.items() %}
                                 <option value="{{ key }}">{{ name }}</option>
                                 {% endfor %}
@@ -27,22 +41,22 @@
                         <div id="quantumContainer" class="hidden">
                             <label for="quantum" class="block text-sm font-medium text-gray-700 mb-1">Time Quantum</label>
                             <input type="number" id="quantum" name="quantum" value="2" min="1" 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all">
                         </div>
                         
                         <div id="contextSwitchContainer" class="hidden">
                             <label for="ctx" class="block text-sm font-medium text-gray-700 mb-1">Context Switch Time</label>
                             <input type="number" id="ctx" name="ctx" value="0" min="0" 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all">
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-                <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex justify-between items-center">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8 card">
+                <div class="gradient-accent px-6 py-4 flex justify-between items-center">
                     <h2 class="text-xl font-semibold text-white">Process Configuration</h2>
-                    <button type="button" id="addProcessBtn" class="bg-white text-green-600 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors flex items-center">
+                    <button type="button" id="addProcessBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors flex items-center">
                         <i class="fas fa-plus mr-2"></i> Add Process
                     </button>
                 </div>
@@ -78,7 +92,7 @@
                 <button type="button" id="resetBtn" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
                     <i class="fas fa-redo mr-2"></i> Reset
                 </button>
-                <button type="submit" id="submitBtn" class="btn-primary px-8 py-3 rounded-lg font-medium text-lg flex items-center space-x-2 disabled:opacity-50" disabled>
+                <button type="submit" id="submitBtn" class="btn-primary px-8 py-3 rounded-lg font-medium text-lg flex items-center space-x-2 disabled:opacity-50 shine" disabled>
                     <span>Run Simulation</span>
                     <i class="fas fa-play ml-2"></i>
                 </button>
@@ -176,27 +190,31 @@
         
         processes.forEach(process => {
             const row = document.createElement('tr');
-            row.className = 'border-b hover:bg-gray-50';
+            row.className = 'border-b hover:bg-gray-50 transition-colors';
             
             row.innerHTML = `
-                <td class="py-3 px-4">${process.pid}</td>
+                <td class="py-3 px-4">
+                    <div class="flex items-center">
+                        <span class="bg-blue-100 text-blue-800 font-medium px-2.5 py-0.5 rounded-full mr-2">${process.pid}</span>
+                    </div>
+                </td>
                 <td class="py-3 px-4">
                     <input type="number" min="0" value="${process.arrival_time}" 
-                           class="w-20 px-2 py-1 border border-gray-300 rounded"
+                           class="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 transition-all"
                            onchange="updateProcess(${process.pid}, 'arrival_time', this.value)">
                 </td>
                 <td class="py-3 px-4">
                     <input type="number" min="1" value="${process.burst_time}" 
-                           class="w-20 px-2 py-1 border border-gray-300 rounded"
+                           class="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 transition-all"
                            onchange="updateProcess(${process.pid}, 'burst_time', this.value)">
                 </td>
                 <td class="py-3 px-4 ${needsPriority ? '' : 'hidden'}">
                     <input type="number" min="0" value="${process.priority || 0}" 
-                           class="w-20 px-2 py-1 border border-gray-300 rounded"
+                           class="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 transition-all"
                            onchange="updateProcess(${process.pid}, 'priority', this.value)">
                 </td>
                 <td class="py-3 px-4">
-                    <button type="button" class="text-red-500 hover:text-red-700" onclick="removeProcess(${process.pid})">
+                    <button type="button" class="text-gray-500 hover:text-gray-700 transition-colors" onclick="removeProcess(${process.pid})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
