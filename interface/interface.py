@@ -1,7 +1,8 @@
 # ───────── interface/interface.py ─────────
 from __future__ import annotations
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import importlib, json, pathlib, sys, os
+import pandas as pd
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 import main  # reuse helpers
@@ -103,6 +104,107 @@ def run():
         processColors=process_colors,
         pidToColor=pid_to_color
     )
+
+@app.route('/upload_processes', methods=['POST'])
+def upload_processes():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    try:
+        if file.filename.endswith('.json'):
+            processes = process_json_file(file)
+        elif file.filename.endswith(('.xlsx', '.xls')):
+            processes = process_excel_file(file)
+        else:
+            return jsonify({'error': 'Unsupported file format'}), 400
+        
+        return jsonify({'processes': processes})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+def process_json_file(file):
+    try:
+        data = json.load(file)
+        if not isinstance(data, list):
+            raise ValueError("JSON file must contain an array of processes")
+        
+        processes = []
+        for i, proc in enumerate(data, 1):
+            pid = proc.get('pid', i)
+            arrival_time = int(proc.get('arrival_time', 0))
+            burst_time = int(proc.get('burst_time'))
+            priority = int(proc.get('priority', 0))
+            
+            if burst_time <= 0:
+                raise ValueError(f"Process {pid}: Burst time must be positive")
+            if arrival_time < 0:
+                raise ValueError(f"Process {pid}: Arrival time cannot be negative")
+            
+            processes.append({
+                'pid': pid,
+                'arrival_time': arrival_time,
+                'burst_time': burst_time,
+                'priority': priority
+            })
+        
+        return processes
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON format")
+
+def process_excel_file(file):
+    try:
+        df = pd.read_excel(file)
+        required_columns = ['PID', 'Arrival Time', 'Burst Time']
+        
+        # Check for column names (case-insensitive)
+        df.columns = df.columns.str.lower()
+        column_mapping = {
+            'pid': ['pid', 'process id', 'id'],
+            'arrival_time': ['arrival time', 'arrival', 'at'],
+            'burst_time': ['burst time', 'burst', 'bt'],
+            'priority': ['priority', 'prio', 'pr']
+        }
+        
+        # Map columns to standardized names
+        for std_name, variations in column_mapping.items():
+            for col in df.columns:
+                if col in variations:
+                    df = df.rename(columns={col: std_name})
+                    break
+        
+        # Validate required columns
+        missing_cols = [col for col in ['pid', 'arrival_time', 'burst_time'] 
+                       if col not in df.columns]
+        if missing_cols:
+            raise ValueError(f"Missing required columns: {', '.join(missing_cols)}")
+        
+        # Convert to list of dictionaries
+        processes = []
+        for i, row in df.iterrows():
+            pid = int(row.get('pid', i + 1))
+            arrival_time = int(row['arrival_time'])
+            burst_time = int(row['burst_time'])
+            priority = int(row.get('priority', 0))
+            
+            if burst_time <= 0:
+                raise ValueError(f"Process {pid}: Burst time must be positive")
+            if arrival_time < 0:
+                raise ValueError(f"Process {pid}: Arrival time cannot be negative")
+            
+            processes.append({
+                'pid': pid,
+                'arrival_time': arrival_time,
+                'burst_time': burst_time,
+                'priority': priority
+            })
+        
+        return processes
+    except Exception as e:
+        raise ValueError(f"Error processing Excel file: {str(e)}")
 
 if __name__ == "__main__":
     app.run(debug=True)
