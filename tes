@@ -1,0 +1,32 @@
+COMPARISON RESULTS
++----------------------+--------+---------------+--------------------------+
+| Metric               |   FCFS |   Round-Robin |   Priority + Round-Robin |
++======================+========+===============+==========================+
+| Avg. Waiting Time    |    1   |           2   |                      3.5 |
++----------------------+--------+---------------+--------------------------+
+| Avg. Turnaround Time |    7.5 |           8.5 |                     10   |
++----------------------+--------+---------------+--------------------------+
+| Avg. Response Time   |    1   |           2   |                      3.5 |
++----------------------+--------+---------------+--------------------------+
+| CPU Utilization %    |  100   |         100   |                    100   |
++----------------------+--------+---------------+--------------------------+
+
+ANALYSIS:
+
+Avg. Waiting Time:
+Best: FCFS (1.00)
+- Round-Robin: 2.0x longer
+- Priority + Round-Robin: 3.5x longer
+
+Avg. Turnaround Time:
+Best: FCFS (7.50)
+- Round-Robin: 1.1x longer
+- Priority + Round-Robin: 1.3x longer
+
+Avg. Response Time:
+Best: FCFS (1.00)
+- Round-Robin: 2.0x longer
+- Priority + Round-Robin: 3.5x longer
+
+CPU Utilization %:
+All algorithms have the same value: 100.00%

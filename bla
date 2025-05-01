@@ -1,0 +1,42 @@
+CPU SCHEDULING ALGORITHM COMPARISON
+=================================
+
+PROCESSES USED FOR COMPARISON:
+PID	Arrival	Burst	Priority
+1	0	5	2
+2	3	8	1
+
+COMPARISON RESULTS:
++----------------------+--------+---------------+--------------------------+
+| Metric               |   FCFS |   Round-Robin |   Priority + Round-Robin |
++======================+========+===============+==========================+
+| Avg. Waiting Time    |    1   |           2   |                     3.5  |
++----------------------+--------+---------------+--------------------------+
+| Avg. Turnaround Time |    7.5 |           8.5 |                    10    |
++----------------------+--------+---------------+--------------------------+
+| Avg. Response Time   |    1   |           2   |                     3.5  |
++----------------------+--------+---------------+--------------------------+
+| CPU Utilization %    |  100   |         100   |                   108.33 |
++----------------------+--------+---------------+--------------------------+
+
+ANALYSIS:
+
+Avg. Waiting Time:
+Best: FCFS (1.00)
+- Round-Robin takes 100.00% longer
+- Priority + Round-Robin takes 3.50x longer
+
+Avg. Turnaround Time:
+Best: FCFS (7.50)
+- Round-Robin takes 13.33% longer
+- Priority + Round-Robin takes 33.33% longer
+
+Avg. Response Time:
+Best: FCFS (1.00)
+- Round-Robin takes 100.00% longer
+- Priority + Round-Robin takes 3.50x longer
+
+CPU Utilization %:
+Best: Priority + Round-Robin (108.33%)
+- FCFS is 8.33% lower
+- Round-Robin is 8.33% lower

@@ -125,310 +125,192 @@ class AlgorithmComparison:
         return results
     
     def _validate_and_fix_metrics(self, metrics, processes):
-        """Ensure all required metrics exist and are valid, calculate them if missing"""
-        # Check if avg_waiting_time is missing or zero
-        if 'avg_waiting_time' not in metrics or metrics['avg_waiting_time'] == 0:
-            waiting_times = [p.waiting_time for p in processes if hasattr(p, 'waiting_time')]
-            if waiting_times:
-                metrics['avg_waiting_time'] = sum(waiting_times) / len(waiting_times)
-            else:
-                # Calculate waiting time if not set
-                waiting_times = []
-                for p in processes:
-                    if hasattr(p, 'completion_time') and hasattr(p, 'burst_time') and hasattr(p, 'arrival_time'):
-                        p.waiting_time = p.completion_time - p.burst_time - p.arrival_time
-                        waiting_times.append(p.waiting_time)
-                
-                if waiting_times:
-                    metrics['avg_waiting_time'] = sum(waiting_times) / len(waiting_times)
+        """Ensure all required metrics exist and are valid"""
+        # Validate/Create Waiting Time
+        if 'avg_waiting_time' not in metrics or metrics['avg_waiting_time'] <= 0:
+            waiting_times = [p.completion_time - p.arrival_time - p.burst_time 
+                            for p in processes if hasattr(p, 'completion_time')]
+            metrics['avg_waiting_time'] = sum(waiting_times)/len(waiting_times) if waiting_times else 0.0
+
+        # Validate/Create Turnaround Time
+        if 'avg_turnaround_time' not in metrics or metrics['avg_turnaround_time'] <= 0:
+            turnaround_times = [p.completion_time - p.arrival_time 
+                            for p in processes if hasattr(p, 'completion_time')]
+            metrics['avg_turnaround_time'] = sum(turnaround_times)/len(turnaround_times) if turnaround_times else 0.0
+
+        # Validate/Create Response Time
+        if 'avg_response_time' not in metrics or metrics['avg_response_time'] <= 0:
+            response_times = []
+            for p in processes:
+                if hasattr(p, 'response_time'):
+                    rt = p.response_time
+                elif hasattr(p, 'first_execution'):
+                    rt = p.first_execution - p.arrival_time
                 else:
-                    metrics['avg_waiting_time'] = 0.0  # Default value
-        
-        # Check if avg_turnaround_time is missing or zero
-        if 'avg_turnaround_time' not in metrics or metrics['avg_turnaround_time'] == 0:
-            turnaround_times = [p.turnaround_time for p in processes if hasattr(p, 'turnaround_time')]
-            if turnaround_times:
-                metrics['avg_turnaround_time'] = sum(turnaround_times) / len(turnaround_times)
-            else:
-                # Calculate turnaround time if not set
-                turnaround_times = []
-                for p in processes:
-                    if hasattr(p, 'completion_time') and hasattr(p, 'arrival_time'):
-                        p.turnaround_time = p.completion_time - p.arrival_time
-                        turnaround_times.append(p.turnaround_time)
-                
-                if turnaround_times:
-                    metrics['avg_turnaround_time'] = sum(turnaround_times) / len(turnaround_times)
+                    rt = getattr(p, 'waiting_time', 0)
+                response_times.append(rt)
+            metrics['avg_response_time'] = sum(response_times)/len(response_times) if response_times else 0.0
+
+        # Validate/Create CPU Utilization (with 100% cap)
+        if 'cpu_utilization' not in metrics or metrics['cpu_utilization'] <= 0:
+            try:
+                if metrics.get('schedule'):
+                    total_time = max(t['finish'] for t in metrics['schedule'])
+                    busy_time = sum(t['finish'] - t['start'] for t in metrics['schedule'])
+                    metrics['cpu_utilization'] = min((busy_time/total_time)*100, 100) if total_time > 0 else 0
                 else:
-                    metrics['avg_turnaround_time'] = 0.0  # Default value
-        
-        # Check if avg_response_time is missing or zero
-        if 'avg_response_time' not in metrics or metrics['avg_response_time'] == 0:
-            response_times = [p.response_time for p in processes if hasattr(p, 'response_time')]
-            if response_times:
-                metrics['avg_response_time'] = sum(response_times) / len(response_times)
-            else:
-                # Look for first_response_time attribute or calculate it
-                response_times = []
-                for p in processes:
-                    if hasattr(p, 'first_response_time'):
-                        p.response_time = p.first_response_time - p.arrival_time
-                    elif hasattr(p, 'first_execution') and hasattr(p, 'arrival_time'):
-                        p.response_time = p.first_execution - p.arrival_time
-                    else:
-                        # Default to waiting time if no better data available
-                        if hasattr(p, 'waiting_time'):
-                            p.response_time = p.waiting_time
-                    
-                    if hasattr(p, 'response_time'):
-                        response_times.append(p.response_time)
-                
-                if response_times:
-                    metrics['avg_response_time'] = sum(response_times) / len(response_times)
-                else:
-                    metrics['avg_response_time'] = 0.0  # Default value
-        
-        # Check if cpu_utilization is missing
-        if 'cpu_utilization' not in metrics or metrics['cpu_utilization'] == 0:
-            # Calculate from schedule if available
-            if 'schedule' in metrics and metrics['schedule']:
-                total_time = max(task['finish'] for task in metrics['schedule'])
-                busy_time = sum(task['finish'] - task['start'] for task in metrics['schedule'])
-                if total_time > 0:
-                    metrics['cpu_utilization'] = (busy_time / total_time) * 100
-                else:
-                    metrics['cpu_utilization'] = 0.0
-            else:
-                # Calculate from process burst times
-                if processes:
                     total_burst = sum(p.burst_time for p in processes)
-                    max_completion = max((p.completion_time for p in processes if hasattr(p, 'completion_time')), default=0)
-                    if max_completion > 0:
-                        metrics['cpu_utilization'] = (total_burst / max_completion) * 100
-                    else:
-                        metrics['cpu_utilization'] = 0.0
-                else:
-                    metrics['cpu_utilization'] = 0.0
-    
-    def _create_comparison_table(self, results):
-        """Create a comparison table of metrics for all algorithms"""
-        # Prepare table headers
-        headers = ["Metric"]
-        for algo_id in results:
-            headers.append(results[algo_id]['name'])
-        
-        # Prepare table rows
-        rows = []
-        for metric in self.metrics_to_compare:
-            row = [self.metric_names[metric]]
-            
-            for algo_id in results:
-                # Format the metric value to 2 decimal places
-                value = results[algo_id]['metrics'].get(metric, 0)
-                row.append(f"{value:.2f}")
-            
-            rows.append(row)
-        
-        # Create table using tabulate
-        table = tabulate(rows, headers, tablefmt="grid")
-        return table
-    
+                    max_comp = max((p.completion_time for p in processes if hasattr(p, 'completion_time')), default=0)
+                    metrics['cpu_utilization'] = min((total_burst/max_comp)*100, 100) if max_comp > 0 else 0
+            except:
+                metrics['cpu_utilization'] = 0
+
     def display_comparison_results(self, results, color):
-        """Display the comparison results in a formatted way"""
-        # Display comparison table
-        print(f"\n{color.CYAN}{color.BOLD}{'═' * 5} Algorithm Comparison Results {'═' * 25}{color.RESET}")
+        """Display comparison results with proper equal-value handling"""
+        print(f"\n{color.CYAN}{color.BOLD}{'═'*5} Results {'═'*40}{color.RESET}")
         table = self._create_comparison_table(results)
         print(table)
         
-        # Analyze and highlight the best algorithm for each metric
-        print(f"\n{color.CYAN}{color.BOLD}{'═' * 5} Analysis {'═' * 40}{color.RESET}")
+        print(f"\n{color.CYAN}{color.BOLD}{'═'*5} Analysis {'═'*38}{color.RESET}")
         
         for metric in self.metrics_to_compare:
             print(f"\n{color.YELLOW}• {self.metric_names[metric]}{color.RESET}:")
-            
-            # For CPU utilization, higher is better; for other metrics, lower is better
             is_higher_better = metric == "cpu_utilization"
             
-            # Get metric values for all algorithms
-            metric_values = [(algo_id, results[algo_id]['metrics'].get(metric, 0)) 
-                             for algo_id in results]
+            # Get all values
+            algo_data = [(a_id, results[a_id]['name'], results[a_id]['metrics'].get(metric,0)) 
+                        for a_id in results]
+            values = [x[2] for x in algo_data]
             
-            # Check if all algorithms have the same value for this metric
-            all_same = len(set(value for _, value in metric_values)) == 1
-            if all_same:
-                value = metric_values[0][1]
-                unit = "%" if metric == "cpu_utilization" else ""
-                print(f"  {color.YELLOW}All algorithms have the same value ({value:.2f}{unit}){color.RESET}")
-                continue
-            
-            # Skip analysis if all values are 0
-            if all(value == 0 for _, value in metric_values):
-                print(f"  {color.YELLOW}All algorithms have the same value (0.00){color.RESET}")
+            # Check for identical values
+            if len(set(values)) == 1:
+                unit = "%" if is_higher_better else ""
+                print(f"  {color.GREEN}All equal:{color.RESET} {values[0]:.2f}{unit}")
                 continue
                 
-            # Find best algorithm based on the metric
-            if is_higher_better:
-                best_algo_id = max(metric_values, key=lambda x: x[1])[0]
-                best_value = results[best_algo_id]['metrics'].get(metric, 0)
-                print(f"  {color.GREEN}Best:{color.RESET} {color.BOLD}{results[best_algo_id]['name']}{color.RESET} ({best_value:.2f}%)")
-            else:
-                best_algo_id = min(metric_values, key=lambda x: x[1])[0]
-                best_value = results[best_algo_id]['metrics'].get(metric, 0)
-                print(f"  {color.GREEN}Best:{color.RESET} {color.BOLD}{results[best_algo_id]['name']}{color.RESET} ({best_value:.2f})")
+            # Find best and worst
+            best_algo = max(algo_data, key=lambda x: x[2]) if is_higher_better else min(algo_data, key=lambda x: x[2])
+            best_id, best_name, best_val = best_algo
             
-            # Calculate how much better/worse other algorithms are
-            for algo_id in results:
-                if algo_id != best_algo_id:
-                    current_value = results[algo_id]['metrics'].get(metric, 0)
+            # Print best
+            unit = "%" if is_higher_better else ""
+            print(f"  {color.GREEN}Best:{color.RESET} {best_name} ({best_val:.2f}{unit})")
+            
+            # Compare others
+            for a_id, a_name, a_val in algo_data:
+                if a_id == best_id:
+                    continue
                     
-                    # Handle case where values are the same
-                    if abs(best_value - current_value) < 0.0001:  # Floating point comparison
-                        print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} has the same value")
-                        continue
+                if a_val == best_val:
+                    print(f"  {color.MAGENTA}•{color.RESET} {a_name}: Equal performance")
+                    continue
                     
-                    # Skip percentage calculation if one value is 0 (to avoid division by zero)
-                    if best_value == 0 or current_value == 0:
-                        if is_higher_better:
-                            better = best_value > current_value
-                            print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} performs {'worse' if better else 'better'}")
-                        else:
-                            better = best_value < current_value
-                            print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} performs {'worse' if better else 'better'}")
+                if is_higher_better:
+                    # CPU Utilization comparisons
+                    if best_val == 0 or a_val == 0:
+                        comparison = "N/A"
+                    else:
+                        ratio = best_val / a_val
+                        comparison = f"{ratio:.1f}x better" if ratio > 1 else f"{1/ratio:.1f}x worse"
+                else:
+                    # Time-based comparisons
+                    if best_val == 0:
+                        comparison = "N/A"
+                    else:
+                        ratio = a_val / best_val
+                        comparison = f"{ratio:.1f}x longer"
+                
+                print(f"  {color.MAGENTA}•{color.RESET} {a_name}: {comparison}")
+
+    def export_results(self, results, processes, color):
+        """Export results with proper equal-value handling"""
+        filename = input(f"{color.BLUE}➜ Filename (default: comparison.txt): {color.GREEN}").strip() or "comparison.txt"
+        
+        with open(filename, 'w') as f:
+            # Write metrics table
+            f.write("COMPARISON RESULTS\n")
+            
+            # Build table data
+            headers = ["Metric"] + [results[a_id]['name'] for a_id in results]
+            table_data = []
+            
+            for metric in self.metrics_to_compare:
+                row = [self.metric_names[metric]]
+                for a_id in results:
+                    value = results[a_id]['metrics'].get(metric, 0)
+                    row.append(f"{value:.2f}")
+                table_data.append(row)
+            
+            f.write(tabulate(table_data, headers=headers, tablefmt="grid"))
+            
+            # Write analysis
+            f.write("\n\nANALYSIS:\n")
+            for metric in self.metrics_to_compare:
+                f.write(f"\n{self.metric_names[metric]}:\n")
+                is_higher_better = metric == "cpu_utilization"
+                
+                # Get all values
+                values = [results[a_id]['metrics'].get(metric,0) for a_id in results]
+                
+                # Check for identical values
+                if len(set(values)) == 1:
+                    unit = "%" if is_higher_better else ""
+                    f.write(f"All algorithms have the same value: {values[0]:.2f}{unit}\n")
+                    continue
+                    
+                # Find best
+                best_val = max(values) if is_higher_better else min(values)
+                best_algo = [a_id for a_id in results 
+                            if results[a_id]['metrics'].get(metric,0) == best_val][0]
+                best_name = results[best_algo]['name']
+                
+                f.write(f"Best: {best_name} ({best_val:.2f})\n")
+                
+                # Write comparisons
+                for a_id in results:
+                    if a_id == best_algo:
                         continue
                         
-                    # Calculate percentage difference with proper wording
-                    if is_higher_better:
-                        # For metrics where higher is better (like CPU utilization)
-                        percent_diff = ((best_value - current_value) / current_value) * 100
-                        if percent_diff > 0:
-                            print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} is {percent_diff:.2f}% lower")
-                        else:
-                            print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} is {abs(percent_diff):.2f}% higher")
-                    else:
-                        # For metrics where lower is better (like waiting time)
-                        diff = current_value - best_value
-                        if diff == 0:
-                            print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} has the same performance")
-                        else:
-                            percent_diff = (diff / best_value) * 100
-                            if percent_diff > 100:
-                                # If more than double, express as "X times longer"
-                                times = current_value / best_value
-                                print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} takes {times:.2f}x longer")
-                            else:
-                                print(f"  {color.MAGENTA}•{color.RESET} {results[algo_id]['name']} takes {percent_diff:.2f}% longer")
-    
-    def export_results(self, results, processes, color):
-        """Export comparison results to a file"""
-        print(f"\n{color.CYAN}{color.BOLD}{'═' * 5} Export Results {'═' * 35}{color.RESET}")
-        print(f"{color.YELLOW}Would you like to export the comparison results? (y/n){color.RESET}")
-        
-        choice = input(f"{color.BOLD}{color.BLUE}➜ {color.RESET}Your choice: {color.GREEN}").strip().lower()
-        print(color.RESET, end="")
-        
-        if choice != 'y':
-            return
-        
-        filename = input(f"{color.BOLD}{color.BLUE}➜ {color.RESET}Enter filename (default: comparison_results.txt): {color.GREEN}").strip() or "comparison_results.txt"
-        print(color.RESET, end="")
-        
-        try:
-            with open(filename, 'w') as f:
-                # Write header
-                f.write("CPU SCHEDULING ALGORITHM COMPARISON\n")
-                f.write("=================================\n\n")
-                
-                # Write process information
-                f.write("PROCESSES USED FOR COMPARISON:\n")
-                f.write("PID\tArrival\tBurst\tPriority\n")
-                for p in processes:
-                    priority = getattr(p, 'priority', 'N/A')
-                    f.write(f"{p.pid}\t{p.arrival_time}\t{p.burst_time}\t{priority}\n")
-                f.write("\n")
-                
-                # Write comparison table
-                f.write("COMPARISON RESULTS:\n")
-                table = self._create_comparison_table(results)
-                f.write(table + "\n\n")
-                
-                # Write analysis
-                f.write("ANALYSIS:\n")
-                for metric in self.metrics_to_compare:
-                    f.write(f"\n{self.metric_names[metric]}:\n")
-                    
-                    is_higher_better = metric == "cpu_utilization"
-                    
-                    # Get metric values for all algorithms
-                    metric_values = [(algo_id, results[algo_id]['metrics'].get(metric, 0)) 
-                                    for algo_id in results]
-                    
-                    # Check if all algorithms have the same value for this metric
-                    all_same = len(set(value for _, value in metric_values)) == 1
-                    if all_same:
-                        value = metric_values[0][1]
-                        unit = "%" if metric == "cpu_utilization" else ""
-                        f.write(f"All algorithms have the same value ({value:.2f}{unit})\n")
-                        continue
-                    
-                    # Skip analysis if all values are 0
-                    if all(value == 0 for _, value in metric_values):
-                        f.write(f"All algorithms have the same value (0.00)\n")
-                        continue
+                    a_name = results[a_id]['name']
+                    a_val = results[a_id]['metrics'].get(metric,0)
                     
                     if is_higher_better:
-                        best_algo_id = max(metric_values, key=lambda x: x[1])[0]
-                        best_value = results[best_algo_id]['metrics'].get(metric, 0)
-                        f.write(f"Best: {results[best_algo_id]['name']} ({best_value:.2f}%)\n")
+                        if best_val == 0 or a_val == 0:
+                            comparison = "N/A"
+                        else:
+                            ratio = best_val / a_val
+                            comparison = f"{ratio:.1f}x better" if ratio > 1 else f"{1/ratio:.1f}x worse"
                     else:
-                        best_algo_id = min(metric_values, key=lambda x: x[1])[0]
-                        best_value = results[best_algo_id]['metrics'].get(metric, 0)
-                        f.write(f"Best: {results[best_algo_id]['name']} ({best_value:.2f})\n")
+                        if best_val == 0:
+                            comparison = "N/A"
+                        else:
+                            ratio = a_val / best_val
+                            comparison = f"{ratio:.1f}x longer"
                     
-                    for algo_id in results:
-                        if algo_id != best_algo_id:
-                            current_value = results[algo_id]['metrics'].get(metric, 0)
-                            
-                            # Handle case where values are the same
-                            if abs(best_value - current_value) < 0.0001:  # Floating point comparison
-                                f.write(f"- {results[algo_id]['name']} has the same value\n")
-                                continue
-                            
-                            # Skip percentage calculation if one value is 0 (to avoid division by zero)
-                            if best_value == 0 or current_value == 0:
-                                if is_higher_better:
-                                    better = best_value > current_value
-                                    f.write(f"- {results[algo_id]['name']} performs {'worse' if better else 'better'}\n")
-                                else:
-                                    better = best_value < current_value
-                                    f.write(f"- {results[algo_id]['name']} performs {'worse' if better else 'better'}\n")
-                                continue
-                                
-                            # Calculate percentage difference with proper wording
-                            if is_higher_better:
-                                # For metrics where higher is better (like CPU utilization)
-                                percent_diff = ((best_value - current_value) / current_value) * 100
-                                if percent_diff > 0:
-                                    f.write(f"- {results[algo_id]['name']} is {percent_diff:.2f}% lower\n")
-                                else:
-                                    f.write(f"- {results[algo_id]['name']} is {abs(percent_diff):.2f}% higher\n")
-                            else:
-                                # For metrics where lower is better (like waiting time)
-                                diff = current_value - best_value
-                                if diff == 0:
-                                    f.write(f"- {results[algo_id]['name']} has the same performance\n")
-                                else:
-                                    percent_diff = (diff / best_value) * 100
-                                    if percent_diff > 100:
-                                        # If more than double, express as "X times longer"
-                                        times = current_value / best_value
-                                        f.write(f"- {results[algo_id]['name']} takes {times:.2f}x longer\n")
-                                    else:
-                                        f.write(f"- {results[algo_id]['name']} takes {percent_diff:.2f}% longer\n")
+                    f.write(f"- {a_name}: {comparison}\n")
+    def _create_comparison_table(self, results):
+            """Create a comparison table of metrics for all algorithms"""
+            # Prepare table headers
+            headers = ["Metric"]
+            for algo_id in results:
+                headers.append(results[algo_id]['name'])
             
-            print(f"{color.GREEN}✓ Results exported to {filename}{color.RESET}")
-        except Exception as e:
-            print(f"{color.RED}✗ Error exporting results: {e}{color.RESET}")
-
+            # Prepare table rows
+            rows = []
+            for metric in self.metrics_to_compare:
+                row = [self.metric_names[metric]]
+                
+                for algo_id in results:
+                    # Format the metric value to 2 decimal places
+                    value = results[algo_id]['metrics'].get(metric, 0)
+                    row.append(f"{value:.2f}")
+                
+                rows.append(row)
+            
+            # Create table using tabulate
+            table = tabulate(rows, headers, tablefmt="grid")
+            return table
+    
 def run_algorithm_comparison(processes, color):
     """Main function to run the algorithm comparison"""
     comparator = AlgorithmComparison()
