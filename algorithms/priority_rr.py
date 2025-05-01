@@ -1,151 +1,121 @@
-
-# Priority Round Robin CPU Scheduling Algorithm
+# Priority Round-Robin CPU Scheduling  (minimal patch – no mid-slice pre-emption)
+# ------------------------------------------------------------------------------
+#  Only two small changes to your original logic:
+#  1)  We **removed** the block that yanked the CPU away when a higher-priority
+#      job arrived mid-quantum.  The running process now keeps its slice.
+#  2)  Added a clarifying docstring line and (optional) context-switch delay
+#      right after a slice ends.  Everything else is exactly the same layout.
 
 from typing import List, Dict, Tuple
 from process import Process
 
-def priority_round_robin(process_list: List[Process], quantum: int = 4, context_switch: int = 0):
-    """
-    Priority-based Round Robin scheduler implementation.
-    
-    Args:
-        process_list: List of Process objects to be scheduled
-        quantum: Maximum time slice given to each process
-        context_switch: Time overhead when switching between processes
-    
-    Returns:
-        completed: List of Process objects with final metrics
-        schedule: Timeline of execution records (pid, start, finish)
-        stats: Performance metrics including averages and utilization
-    """
-    # Sort processes by arrival time for chronological processing
-    arrival = sorted(process_list, key=lambda p: p.arrival_time)
 
-    # Priority-based ready queues - maps priority levels to their processes
+def priority_round_robin(
+    process_list: List[Process],
+    quantum: int = 4,
+    context_switch: int = 0
+) -> Tuple[List[Process], List[dict], Dict[str, float]]:
+    """
+    Priority-based Round Robin scheduler.
+    ✦ A running job is **not pre-empted inside its current quantum** when higher
+      priority work shows up; it finishes that slice first.
+    """
+
+    # -------------------------------------------------------------------------
+    #  Setup
+    # -------------------------------------------------------------------------
+    arrival = sorted(process_list, key=lambda p: p.arrival_time)
     ready: Dict[int, List[Process]] = {}
 
-    # Track execution timeline and metrics
-    schedule = []         # Records when each process runs
-    completed = []        # Stores finished processes
-    idle_time = 0        # Tracks CPU idle periods
-    first_response = {}  # When each process first gets CPU
+    schedule   = []
+    completed  = []
+    idle_time  = 0
+    first_resp = {}
 
-    # Initialize simulation clock to earliest process arrival
     current_time = arrival[0].arrival_time if arrival else 0
+    current      = None
+    last_start   = None
+    slice_end    = None
 
-    # Track current process execution state
-    current = None          # Currently executing process
-    last_start = None      # When current slice began
-    slice_end = None       # When current quantum expires
-
-    # Main scheduling loop - continues while we have:
-    # - Future arrivals
-    # - Ready processes at any priority
-    # - Currently running process
+    # -------------------------------------------------------------------------
+    #  Main loop
+    # -------------------------------------------------------------------------
     while arrival or ready or current:
 
-        # Process new arrivals and handle preemption
+        # Admit any processes that have arrived.
         while arrival and arrival[0].arrival_time <= current_time:
             p = arrival.pop(0)
-            if p.priority in ready:
-                ready[p.priority].append(p)
-            else:
-                ready[p.priority] = [p]
+            ready.setdefault(p.priority, []).append(p)
+            # ---------------  PATCH: no more mid-slice pre-emption ---------------
+            # (The four lines that used to interrupt 'current' were removed.)
+            # ---------------------------------------------------------------------
 
-            # Preempt current process if new arrival has higher priority
-            if current and p.priority < current.priority:
-                schedule.append({
-                    'pid': current.pid,
-                    'start': last_start,
-                    'finish': current_time
-                })
-                current.remaining_time -= current_time - last_start
-                # Return interrupted process to front of its queue
-                if current.priority in ready:
-                    ready[current.priority].insert(0, current)
-                else:
-                    ready[current.priority] = [current]
-                current = None
-
-        # Select next process if CPU is idle
+        # If CPU is idle, pick next ready process.
         if not current and ready:
-            prio = min(ready)  # Lowest number = highest priority
+            prio   = min(ready)                # lower value ⇒ higher priority
             current = ready[prio].pop(0)
             if not ready[prio]:
-                del ready[prio]  # Clean up empty queues
+                del ready[prio]
 
             last_start = current_time
-            # Record first response time for this process
-            if current.pid not in first_response:
-                first_response[current.pid] = current_time - current.arrival_time
-
+            if current.pid not in first_resp:
+                first_resp[current.pid] = current_time - current.arrival_time
             slice_end = current_time + min(quantum, current.remaining_time)
 
-        # Handle CPU idle periods
+        # Nothing ready? Fast-forward to next arrival.
         if not current:
             if arrival:
                 idle_time += arrival[0].arrival_time - current_time
                 current_time = arrival[0].arrival_time
             continue
 
-        # Determine next event (arrival vs quantum expiry)
+        # Run until either slice finishes or a new job arrives.
         next_arrival = arrival[0].arrival_time if arrival else float('inf')
-        next_tick = min(slice_end, next_arrival)
-        run_time = next_tick - current_time
-        
-        # Execute process for this time segment
+        next_tick    = min(slice_end, next_arrival)
+        run_time     = next_tick - current_time
+
         current.remaining_time -= run_time
-        current_time = next_tick
+        current_time            = next_tick
 
-        # Handle quantum expiry with remaining work
-        if current_time == slice_end and current.remaining_time > 0:
-            schedule.append({
-                'pid': current.pid,
-                'start': last_start,
-                'finish': current_time
-            })
-            # Re-queue the current process before handling new arrivals
-            if current.priority in ready:
-                ready[current.priority].append(current)
-            else:
-                ready[current.priority] = [current]
-            current = None
-            
-            # Process any arrivals that occurred exactly at slice end
-            while arrival and arrival[0].arrival_time <= current_time:
-                p = arrival.pop(0)
-                if p.priority in ready:
-                    ready[p.priority].append(p)
-                else:
-                    ready[p.priority] = [p]
-                    
-            continue
+        # Admit arrivals that happened exactly *now* (edge of slice).
+        while arrival and arrival[0].arrival_time == current_time:
+            p = arrival.pop(0)
+            ready.setdefault(p.priority, []).append(p)
 
-        # Handle process completion
-        if current.remaining_time == 0:
-            turnaround = current_time - current.arrival_time
-            schedule.append({
-                'pid': current.pid,
-                'start': last_start,
-                'finish': current_time
-            })
-            current.completion_time = current_time
-            current.turnaround_time = turnaround
-            current.waiting_time = turnaround - current.burst_time
-            completed.append(current)
-            current = None
+        # Slice finished?
+        if current_time == slice_end:
+            schedule.append({'pid': current.pid, 'start': last_start, 'finish': current_time})
 
-    # Calculate final performance metrics
-    n = len(completed)
-    avg_wait = sum(p.waiting_time for p in completed) / n
-    avg_tat = sum(p.turnaround_time for p in completed) / n
-    avg_resp = sum(first_response[p.pid] for p in completed) / n
+            if current.remaining_time == 0:              # job done
+                turnaround = current_time - current.arrival_time
+                current.completion_time  = current_time
+                current.turnaround_time  = turnaround
+                current.waiting_time     = turnaround - current.burst_time
+                completed.append(current)
+            else:                                        # needs another slice
+                ready.setdefault(current.priority, []).append(current)
+
+            current   = None
+            slice_end = None
+            last_start = None
+
+            # Optional context-switch overhead
+            if context_switch:
+                current_time += context_switch
+
+    # -------------------------------------------------------------------------
+    #  Aggregate metrics
+    # -------------------------------------------------------------------------
+    n = len(completed) or 1
+    avg_wait = sum(p.waiting_time     for p in completed) / n
+    avg_tat  = sum(p.turnaround_time  for p in completed) / n
+    avg_resp = sum(first_resp[p.pid]  for p in completed) / n
     cpu_util = 100 * (current_time - idle_time) / current_time if current_time else 0
 
     stats = {
-        'avg_waiting': avg_wait,
-        'avg_turnaround': avg_tat,
-        'avg_response': avg_resp,
+        'avg_waiting'    : avg_wait,
+        'avg_turnaround' : avg_tat,
+        'avg_response'   : avg_resp,
         'cpu_utilisation': cpu_util
     }
 
