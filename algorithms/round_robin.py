@@ -60,11 +60,6 @@ def round_robin(processes: List[Process],
             current.waiting_time    = current.turnaround_time - current.burst_time
             completed.append(current)
             
-            leftover = quantum - run_time        
-            if leftover > 0:
-                idle_time += leftover              
-                clock     += leftover
-            
 
     # Compute average stats for all the algorithm
     n         = len(completed)
