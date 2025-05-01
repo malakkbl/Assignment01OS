@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Installation script for CPU Scheduler Simulator with Algorithm Comparison feature
 """
