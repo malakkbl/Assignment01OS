@@ -14,6 +14,9 @@ from algorithm_comparison import run_algorithm_comparison
 import time
 import os
 import sys
+import json
+import pandas as pd
+from datetime import datetime
 
 # Terminal UI Components
 # Color class provides ANSI escape codes for terminal text formatting
@@ -141,9 +144,44 @@ def choose_algorithm():
         print_error("Invalid option – try again.")
         time.sleep(1)
 
-# Process Data Collection
+def choose_input_method():
+    """Choose between manual entry, JSON file, or Excel file."""
+    print_subheader("INPUT METHOD")
+    print(f"  {Color.CYAN}1{Color.RESET}) {Color.BOLD}Manual Entry{Color.RESET} - Input process details manually")
+    print(f"  {Color.CYAN}2{Color.RESET}) {Color.BOLD}JSON File{Color.RESET} - Import processes from a JSON file")
+    print(f"  {Color.CYAN}3{Color.RESET}) {Color.BOLD}Excel/CSV File{Color.RESET} - Import from Excel or CSV file")
+    
+    while True:
+        choice = input_styled("Choose input method").strip()
+        print(Color.RESET, end="")
+        
+        if choice in ["1", "2", "3"]:
+            return choice
+        
+        print_error("Invalid option – try again.")
+        time.sleep(1)
 
-def read_processes(need_priority: bool = False):
+def choose_output_method():
+    """Choose between terminal display only or saving to file."""
+    print_subheader("OUTPUT METHOD")
+    print(f"  {Color.CYAN}1{Color.RESET}) {Color.BOLD}Terminal Only{Color.RESET} - Display results in terminal")
+    print(f"  {Color.CYAN}2{Color.RESET}) {Color.BOLD}Save to Text File{Color.RESET} - Save results to a text file")
+    print(f"  {Color.CYAN}3{Color.RESET}) {Color.BOLD}Save to JSON{Color.RESET} - Save results to a JSON file")
+    print(f"  {Color.CYAN}4{Color.RESET}) {Color.BOLD}Save to Excel{Color.RESET} - Save results to an Excel file")
+    print(f"  {Color.CYAN}5{Color.RESET}) {Color.BOLD}Save to CSV{Color.RESET} - Save results to a CSV file")
+    
+    while True:
+        choice = input_styled("Choose output method").strip()
+        print(Color.RESET, end="")
+        
+        if choice in ["1", "2", "3", "4", "5"]:
+            return choice
+        
+        print_error("Invalid option – try again.")
+        time.sleep(1)
+
+# ------------- DATA ENTRY --------------
+def read_processes_manually(need_priority: bool = False):
     """
     Interactive process data collection with input validation.
     
@@ -165,10 +203,10 @@ def read_processes(need_priority: bool = False):
         n = int(input_styled("Number of processes").strip())
         if n <= 0:
             print_error("Number of processes must be positive")
-            return read_processes(need_priority)
+            return read_processes_manually(need_priority)
     except ValueError:
         print_error("Please enter a valid number")
-        return read_processes(need_priority)
+        return read_processes_manually(need_priority)
     
     processes = []
     print(f"\n{Color.YELLOW}Enter details for {n} processes:{Color.RESET}")
@@ -213,6 +251,165 @@ def read_processes(need_priority: bool = False):
 
     print_success(f"Successfully created {n} processes")
     return processes
+def read_processes_from_json(need_priority: bool = False):
+    """Read process information from a JSON file."""
+    print_subheader("JSON FILE INPUT")
+    
+    while True:
+        filename = input_styled("Enter JSON file path").strip()
+        try:
+            with open(filename, 'r') as file:
+                data = json.load(file)
+                
+                if not isinstance(data, list):
+                    print_error("JSON file must contain a list of process objects")
+                    continue
+                
+                processes = []
+                
+                for i, proc in enumerate(data, start=1):
+                    # Check required fields
+                    if 'arrival_time' not in proc or 'burst_time' not in proc:
+                        print_error(f"Process #{i} is missing required fields (arrival_time or burst_time)")
+                        continue
+                    
+                    # Extract values with validation
+                    try:
+                        arrival = int(proc['arrival_time'])
+                        burst = int(proc['burst_time'])
+                        
+                        if arrival < 0:
+                            print_warning(f"Process #{i} has negative arrival time, setting to 0")
+                            arrival = 0
+                        
+                        if burst <= 0:
+                            print_warning(f"Process #{i} has invalid burst time, setting to 1")
+                            burst = 1
+                        
+                        # Always read priority if available
+                        priority = int(proc.get('priority', 0))  # Default to 0 if missing
+                        if priority < 0:
+                            print_warning(f"Process #{i} has negative priority, setting to 0")
+                            priority = 0
+                        
+                        # Only require validation if the algorithm needs priority
+                        if need_priority and 'priority' not in proc:
+                            print_warning(f"Process #{i} is missing priority, setting to 0")
+                            priority = 0
+                        
+                        processes.append(Process(i, arrival, burst, priority))
+                    
+                    except ValueError:
+                        print_error(f"Process #{i} has invalid numeric values")
+                        continue
+                
+                if not processes:
+                    print_error("No valid processes found in the JSON file")
+                    continue
+                
+                print_success(f"Successfully loaded {len(processes)} processes from {filename}")
+                return processes
+                
+        except FileNotFoundError:
+            print_error(f"File not found: {filename}")
+        except json.JSONDecodeError:
+            print_error(f"Invalid JSON format in file: {filename}")
+        except Exception as e:
+            print_error(f"Error reading file: {str(e)}")
+        
+        retry = input_styled("Try another file? (y/n)").lower().strip()
+        if retry != 'y':
+            print_warning("Falling back to manual entry...")
+            return read_processes_manually(need_priority)
+
+def read_processes_from_excel(need_priority: bool = False):
+    """Read process information from an Excel or CSV file."""
+    print_subheader("EXCEL/CSV FILE INPUT")
+    
+    while True:
+        filename = input_styled("Enter file path").strip()
+        try:
+            # Detect file type and read appropriately
+            if filename.endswith('.csv'):
+                df = pd.read_csv(filename)
+            else:
+                df = pd.read_excel(filename)
+            
+            # Check required columns
+            required_cols = ['arrival_time', 'burst_time']
+            if need_priority:
+                required_cols.append('priority')
+            
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                print_error(f"Missing required columns: {', '.join(missing_cols)}")
+                print_warning("File must have columns: arrival_time, burst_time" + 
+                            (", priority" if need_priority else ""))
+                continue
+            
+            # Process the data
+            processes = []
+            for i, row in df.iterrows():
+                pid = i + 1  # Auto-generate PIDs starting from 1
+                
+                try:
+                    arrival = int(row['arrival_time'])
+                    burst = int(row['burst_time'])
+                    
+                    if arrival < 0:
+                        print_warning(f"Process #{pid} has negative arrival time, setting to 0")
+                        arrival = 0
+                    
+                    if burst <= 0:
+                        print_warning(f"Process #{pid} has invalid burst time, setting to 1")
+                        burst = 1
+                    
+                    # Handle priority for all cases
+                    priority = 0
+                    if 'priority' in df.columns and not pd.isna(row['priority']):
+                        try:
+                            priority = int(row['priority'])
+                            if priority < 0:
+                                print_warning(f"Process #{pid} has negative priority, setting to 0")
+                                priority = 0
+                        except ValueError:
+                            print_warning(f"Invalid priority for Process #{pid}, using 0")
+                    
+                    processes.append(Process(pid, arrival, burst, priority))
+                
+                except (ValueError, TypeError):
+                    print_warning(f"Skipping row {i+1} due to invalid numeric values")
+                    continue
+            
+            if not processes:
+                print_error("No valid processes found in the file")
+                continue
+            
+            print_success(f"Successfully loaded {len(processes)} processes from {filename}")
+            return processes
+            
+        except FileNotFoundError:
+            print_error(f"File not found: {filename}")
+        except Exception as e:
+            print_error(f"Error reading file: {str(e)}")
+        
+        retry = input_styled("Try another file? (y/n)").lower().strip()
+        if retry != 'y':
+            print_warning("Falling back to manual entry...")
+            return read_processes_manually(need_priority)
+def read_processes(need_priority: bool = False):
+    """Choose input method and read processes accordingly."""
+    input_method = choose_input_method()
+    
+    if input_method == "1":
+        return read_processes_manually(need_priority)
+    elif input_method == "2":
+        return read_processes_from_json(need_priority)
+    elif input_method == "3":
+        return read_processes_from_excel(need_priority)
+    else:
+        # Fallback to manual entry
+        return read_processes_manually(need_priority)
 
 # Result Visualization
 
@@ -276,8 +473,190 @@ def print_metrics(metrics):
         metric_name = key.replace('_', ' ').title()
         print(f"  {Color.YELLOW}{metric_name}:{Color.RESET} {Color.BOLD}{value:.2f}{Color.RESET}")
 
-# Main Program Flow
+def generate_text_report(algo_name, processes, schedule_table, metrics):
+    """Generate a text report of the scheduling results."""
+    report = []
+    report.append("=" * 60)
+    report.append(f"CPU SCHEDULER SIMULATION REPORT")
+    report.append(f"Algorithm: {algo_name}")
+    report.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report.append("=" * 60)
+    
+    # Schedule
+    report.append("\nSCHEDULE")
+    report.append("-" * 26)
+    report.append(f"{'PID':<6}{'Start':<10}{'Finish':<10}")
+    report.append("-" * 26)
+    
+    for row in schedule_table:
+        report.append(f"{row['pid']:<6}{row['start']:<10}{row['finish']:<10}")
+    
+    makespan = max(r['finish'] for r in schedule_table) if schedule_table else 0
+    report.append(f"\nMakespan: {makespan}")
+    
+    # Process statistics
+    report.append("\nPROCESS STATISTICS")
+    report.append("-" * 50)
+    report.append(f"{'PID':<6}{'Waiting Time':<16}{'Turnaround':<14}{'Completion':<14}")
+    report.append("-" * 50)
+    
+    for proc in processes:
+        report.append(f"{proc.pid:<6}{proc.waiting_time:<16}{proc.turnaround_time:<14}{proc.completion_time:<14}")
+    
+    # Metrics
+    report.append("\nPERFORMANCE METRICS")
+    report.append("-" * 30)
+    
+    for key, value in metrics.items():
+        metric_name = key.replace('_', ' ').title()
+        report.append(f"{metric_name}: {value:.2f}")
+    
+    return "\n".join(report)
 
+def save_to_text_file(algo_name, processes, schedule_table, metrics):
+    """Save results to a text file."""
+    report = generate_text_report(algo_name, processes, schedule_table, metrics)
+    filename = f"cpu_schedule_{algo_name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    
+    try:
+        with open(filename, 'w') as f:
+            f.write(report)
+        print_success(f"Results saved to {filename}")
+    except Exception as e:
+        print_error(f"Failed to save results: {e}")
+
+def save_to_json_file(algo_name, processes, schedule_table, metrics):
+    """Save results to a JSON file."""
+    result_data = {
+        "algorithm": algo_name,
+        "date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "schedule": schedule_table,
+        "processes": [
+            {
+                "pid": p.pid,
+                "arrival_time": p.arrival_time,
+                "burst_time": p.burst_time,
+                "priority": getattr(p, 'priority', None),
+                "waiting_time": p.waiting_time,
+                "turnaround_time": p.turnaround_time,
+                "completion_time": p.completion_time
+            } for p in processes
+        ],
+        "metrics": metrics
+    }
+    
+    filename = f"cpu_schedule_{algo_name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    
+    try:
+        with open(filename, 'w') as f:
+            json.dump(result_data, f, indent=2)
+        print_success(f"Results saved to {filename}")
+    except Exception as e:
+        print_error(f"Failed to save results: {e}")
+
+def save_to_excel_file(algo_name, processes, schedule_table, metrics):
+    """Save results to an Excel file."""
+    filename = f"cpu_schedule_{algo_name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    try:
+        with pd.ExcelWriter(filename) as writer:
+            # Process data
+            process_data = []
+            for p in processes:
+                process_dict = {
+                    "PID": p.pid,
+                    "Arrival Time": p.arrival_time,
+                    "Burst Time": p.burst_time,
+                    "Waiting Time": p.waiting_time,
+                    "Turnaround Time": p.turnaround_time,
+                    "Completion Time": p.completion_time
+                }
+                
+                if hasattr(p, 'priority'):
+                    process_dict["Priority"] = p.priority
+                
+                process_data.append(process_dict)
+            
+            pd.DataFrame(process_data).to_excel(writer, sheet_name='Processes', index=False)
+            
+            # Schedule data
+            pd.DataFrame(schedule_table).to_excel(writer, sheet_name='Schedule', index=False)
+            
+            # Metrics
+            metrics_df = pd.DataFrame([metrics])
+            metrics_df.columns = [col.replace('_', ' ').title() for col in metrics_df.columns]
+            metrics_df.to_excel(writer, sheet_name='Metrics', index=False)
+            
+            # Info sheet
+            info_data = {
+                "Info": ["Algorithm", "Date", "Time", "Makespan"],
+                "Value": [
+                    algo_name,
+                    datetime.now().strftime('%Y-%m-%d'),
+                    datetime.now().strftime('%H:%M:%S'),
+                    max(r['finish'] for r in schedule_table) if schedule_table else 0
+                ]
+            }
+            pd.DataFrame(info_data).to_excel(writer, sheet_name='Info', index=False)
+        
+        print_success(f"Results saved to {filename}")
+    except Exception as e:
+        print_error(f"Failed to save results: {e}")
+
+def save_to_csv_file(algo_name, processes, schedule_table, metrics):
+    """Save results to CSV files."""
+    base_filename = f"cpu_schedule_{algo_name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    
+    try:
+        # Process data
+        process_data = []
+        for p in processes:
+            process_dict = {
+                "PID": p.pid,
+                "Arrival Time": p.arrival_time,
+                "Burst Time": p.burst_time,
+                "Waiting Time": p.waiting_time,
+                "Turnaround Time": p.turnaround_time,
+                "Completion Time": p.completion_time
+            }
+            
+            # Add priority if available
+            if hasattr(p, 'priority'):
+                process_dict["Priority"] = p.priority
+            
+            process_data.append(process_dict)
+        
+        # Save to CSV files
+        processes_file = f"{base_filename}_processes.csv"
+        schedule_file = f"{base_filename}_schedule.csv"
+        metrics_file = f"{base_filename}_metrics.csv"
+        
+        pd.DataFrame(process_data).to_csv(processes_file, index=False)
+        pd.DataFrame(schedule_table).to_csv(schedule_file, index=False)
+        
+        # Metrics
+        metrics_df = pd.DataFrame([metrics])
+        metrics_df.columns = [col.replace('_', ' ').title() for col in metrics_df.columns]
+        metrics_df.to_csv(metrics_file, index=False)
+        
+        print_success(f"Results saved to {processes_file}, {schedule_file}, and {metrics_file}")
+    except Exception as e:
+        print_error(f"Failed to save results: {e}")
+
+def save_results(output_choice, algo_name, processes, schedule_table, metrics):
+    """Save results based on the chosen output method."""
+    if output_choice == "1":
+        # Terminal only - already displayed
+        pass
+    elif output_choice == "2":
+        save_to_text_file(algo_name, processes, schedule_table, metrics)
+    elif output_choice == "3":
+        save_to_json_file(algo_name, processes, schedule_table, metrics)
+    elif output_choice == "4":
+        save_to_excel_file(algo_name, processes, schedule_table, metrics)
+    elif output_choice == "5":
+        save_to_csv_file(algo_name, processes, schedule_table, metrics)
+# --------------- DRIVER ----------------
 def main():
     """
     Main program entry point. Handles:
@@ -301,7 +680,7 @@ def main():
     mode = choose_mode()
     
     if mode == "single":
-        # Single Algorithm Execution Flow
+        # Single algorithm mode
         algo_name, algo_fn = choose_algorithm()
         need_priority = "Priority" in algo_name
         processes = read_processes(need_priority)
@@ -330,12 +709,20 @@ def main():
         print_schedule(schedule_table)
         print_process_stats(list_processes)
         print_metrics(metrics)
+        
+        # Output results
+        output_choice = choose_output_method()
+        save_results(output_choice, algo_name, list_processes, schedule_table, metrics)
     
     else:
-        # Algorithm Comparison Mode
-        # Always collect priority since multiple algorithms might need it
-        processes = read_processes(need_priority=True)
-        run_algorithm_comparison(processes, Color)
+        # Comparison mode - no file output needed
+        need_priority = True
+        processes = read_processes(need_priority)
+        
+        # Run the comparison (assumes run_algorithm_comparison handles its own output)
+        print_loading("Running algorithm comparison")
+        results = run_algorithm_comparison(processes, Color)
+        print_success("Algorithm comparison completed! Check above for results.")
     
     print_footer()
 
