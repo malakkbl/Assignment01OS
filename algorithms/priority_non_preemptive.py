@@ -2,10 +2,6 @@
 
 from typing import List
 from process import Process
-from algorithms.utility_functions import (
-    sort_by_arrival,
-    init_current_time
-)
 
 def priority_schedule(process_list: List[Process]):
     """
@@ -18,7 +14,7 @@ def priority_schedule(process_list: List[Process]):
         stats (dict): avg_waiting, avg_turnaround, avg_response, cpu_utilisation
     """
     # 1) Sort all processes by arrival time so we can pop the earliest
-    arrival = sort_by_arrival(process_list)
+    arrival = sorted(process_list, key=lambda p: p.arrival_time)
     
     # 2) ready: map from priority -> list of waiting processes (FIFO per priority)
     ready = {}
@@ -30,7 +26,7 @@ def priority_schedule(process_list: List[Process]):
     first_response = {}     # ← record first CPU access per PID
     
     # 4) Initialize clock to first arrival (or 0 if no processes)
-    current_time = init_current_time(arrival)
+    current_time = arrival[0].arrival_time if arrival else 0
     
     # 5) Track the currently running process
     current = None

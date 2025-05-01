@@ -1,9 +1,6 @@
 # priority_preemptive.py
 from process import Process
-from algorithms.utility_functions import (
-    sort_by_arrival,   # returns processes sorted by arrival_time
-    init_current_time  # picks earliest arrival or returns 0
-)
+
 
 def priority_preemptive_schedule(process_list):
     """
@@ -22,7 +19,7 @@ def priority_preemptive_schedule(process_list):
     for every Process instance.
     """
     # 1)  future arrivals, sorted by arrival_time
-    arrival = sort_by_arrival(process_list)
+    arrival = sorted(process_list, key=lambda p: p.arrival_time)
 
     # 2)  ready-queue:  {priority -> [Process, …]}   (FIFO for equal priority)
     ready = {}
@@ -34,7 +31,7 @@ def priority_preemptive_schedule(process_list):
     first_response = {}
 
     # 4)  start the clock
-    current_time = init_current_time(arrival)
+    current_time = arrival[0].arrival_time if arrival else 0
 
     # 5)  track the current process (if any) and when its slice began
     current     = None
