@@ -1,10 +1,7 @@
 # priority_round_robin.py
 from typing import List, Dict, Tuple
 from process import Process
-from algorithms.utility_functions import (
-    sort_by_arrival,   # helper: returns processes sorted by arrival_time
-    init_current_time  # helper: picks earliest arrival or returns 0
-)
+
 
 def priority_round_robin(
         process_list: List[Process],
@@ -25,7 +22,7 @@ def priority_round_robin(
     """
 
     # 1)  Future arrivals, sorted chronologically
-    arrival = sort_by_arrival(process_list)
+    arrival = sorted(process_list, key=lambda p: p.arrival_time)
 
     # 2)  Ready-queue: {priority → [Process, …]}  FIFO for equal priority
     ready: Dict[int, List[Process]] = {}
@@ -37,7 +34,7 @@ def priority_round_robin(
     first_response = {}
 
     # 4)  Initialise the simulated clock
-    current_time = init_current_time(arrival)
+    current_time = arrival[0].arrival_time if arrival else 0
 
     # 5)  Track the currently running process
     current      = None          # type: Process | None

@@ -5,6 +5,7 @@ from algorithms.priority_preemptive import priority_preemptive_schedule
 from algorithms.sjf import sjf               
 from algorithms.round_robin import round_robin
 from algorithms.priority_rr import priority_round_robin
+from algorithm_comparison import run_algorithm_comparison
 import time
 import os
 import sys
@@ -80,6 +81,22 @@ def input_styled(prompt):
     return input(f"{Color.BOLD}{Color.BLUE}➜ {Color.RESET}{prompt}: {Color.GREEN}")
 
 # ---------------- MENU -----------------
+def choose_mode():
+    """Choose between single algorithm or comparison mode."""
+    print_subheader("OPERATION MODE")
+    print(f"  {Color.CYAN}1{Color.RESET}) {Color.BOLD}Single Algorithm{Color.RESET} - Run one scheduling algorithm")
+    print(f"  {Color.CYAN}2{Color.RESET}) {Color.BOLD}Algorithm Comparison{Color.RESET} - Compare multiple algorithms")
+    
+    while True:
+        choice = input_styled("Choose mode").strip()
+        print(Color.RESET, end="")
+        
+        if choice in ["1", "2"]:
+            return "single" if choice == "1" else "comparison"
+        
+        print_error("Invalid option – try again.")
+        time.sleep(1)
+
 def choose_algorithm():
     """Return (algo_name, algo_function) chosen by the user."""
     algos = {
@@ -220,36 +237,50 @@ def main():
     print(f"\n{Color.YELLOW}Welcome to the CPU Scheduler Simulator!{Color.RESET}")
     print("This tool demonstrates various CPU scheduling algorithms.")
     
-    algo_name, algo_fn = choose_algorithm()
-    need_priority = "Priority" in algo_name
-    processes = read_processes(need_priority)
+    # Choose mode: single algorithm or comparison
+    mode = choose_mode()
     
-    # Get quantum for Round-Robin algorithms
-    quantum = None
-    if "Round-Robin" in algo_name:
-        while True:
-            try:
-                quantum = int(input_styled("Time quantum (> 0)").strip())
-                if quantum > 0:
-                    break
-                print_warning("Time quantum must be positive")
-            except ValueError:
-                print_error("Please enter a valid number")
+    if mode == "single":
+        # Single algorithm mode (original functionality)
+        algo_name, algo_fn = choose_algorithm()
+        need_priority = "Priority" in algo_name
+        processes = read_processes(need_priority)
+        
+        # Get quantum for Round-Robin algorithms
+        quantum = None
+        if "Round-Robin" in algo_name:
+            while True:
+                try:
+                    quantum = int(input_styled("Time quantum (> 0)").strip())
+                    if quantum > 0:
+                        break
+                    print_warning("Time quantum must be positive")
+                except ValueError:
+                    print_error("Please enter a valid number")
+        
+        # Show a loading animation
+        print_loading(f"Scheduling with {algo_name}")
+        
+        # Execute the scheduling algorithm
+        if quantum is not None:
+            list_processes, schedule_table, metrics = algo_fn(processes, quantum)
+        else:
+            list_processes, schedule_table, metrics = algo_fn(processes)
+        
+        # Print results
+        print_success(f"Scheduled {len(processes)} processes using {Color.BOLD}{algo_name}{Color.RESET}")
+        print_schedule(schedule_table)
+        print_process_stats(list_processes)
+        print_metrics(metrics)
     
-    # Show a loading animation
-    print_loading(f"Scheduling with {algo_name}")
-    
-    # Execute the scheduling algorithm
-    if quantum is not None:
-        list_processes, schedule_table, metrics = algo_fn(processes, quantum)
     else:
-        list_processes, schedule_table, metrics = algo_fn(processes)
-    
-    # Print results
-    print_success(f"Scheduled {len(processes)} processes using {Color.BOLD}{algo_name}{Color.RESET}")
-    print_schedule(schedule_table)
-    print_process_stats(list_processes)
-    print_metrics(metrics)
+        # Comparison mode
+        # First, determine if we need priority for any algorithm
+        need_priority = True  # Always collect priority since we don't know which algorithms will be chosen
+        processes = read_processes(need_priority)
+        
+        # Run the comparison
+        run_algorithm_comparison(processes, Color)
     
     print_footer()
 
