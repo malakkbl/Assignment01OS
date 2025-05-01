@@ -7,7 +7,7 @@ def sjf(processes: List[Process]):
     Non-pre-emptive Shortest Job First scheduler.
     Returns:
         completed  – list of Process objects with stats filled in
-        schedule   – list of dicts {pid, start, finish, turnaround}
+        schedule   – list of dicts {pid, start, finish}
         metrics    – dict with averages and CPU utilisation
     """
 
@@ -17,6 +17,7 @@ def sjf(processes: List[Process]):
     ready_q: List[Process] = []  # Stores the processes that are ready to run
     completed: List[Process] = []  # Stores the processes that have completed
     schedule:  List[dict]    = []  # just to simulate a timeline for visualization purposes
+    first_response = {}  # Track when each process first gets CPU time
 
     clock = 0  # The simulated time
     idle_time = 0  # Accumulates gaps when CPU is idle
@@ -39,6 +40,10 @@ def sjf(processes: List[Process]):
         
         #  Compute individual stats for the current process
         start = clock
+        # Record first response time if not already recorded
+        if current.pid not in first_response:
+            first_response[current.pid] = start - current.arrival_time
+
         clock += current.burst_time  # Simulate the process running : run it to completion
         current.completion_time  = clock
         current.waiting_time     = start  - current.arrival_time
@@ -51,18 +56,19 @@ def sjf(processes: List[Process]):
         schedule.append({
             'pid':        current.pid,
             'start':      start,
-            'finish':     clock,
-            'turnaround': current.turnaround_time
+            'finish':     clock
         })
 
     # Compute average stats for all the algorithm
     n = len(completed)
     avg_wait   = sum(p.waiting_time    for p in completed) / n
     avg_tat    = sum(p.turnaround_time for p in completed) / n
+    avg_resp   = sum(first_response[p.pid] for p in completed) / n
     cpu_util   = 100 * (clock - idle_time) / clock
 
     return completed, schedule, {
         'avg_waiting'    : avg_wait,
         'avg_turnaround' : avg_tat,
+        'avg_response'   : avg_resp,
         'cpu_utilisation': cpu_util
     }

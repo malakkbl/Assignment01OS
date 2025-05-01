@@ -1,39 +1,42 @@
-# priority_non_preemptive.py
+# Implementation of Priority Non-Preemptive CPU Scheduling Algorithm
 
 from typing import List
 from process import Process
 
 def priority_schedule(process_list: List[Process]):
     """
-    Non-preemptive priority scheduler where LOWER numeric values indicate HIGHER scheduling priority.
-    Restructured to match the preemptive scheduler's approach.
+    Args:
+        process_list: List of Process objects to be scheduled
     
     Returns:
-        completed (List[Process]), 
-        schedule (List[dict]): each entry has pid, start, finish, turnaround,
-        stats (dict): avg_waiting, avg_turnaround, avg_response, cpu_utilisation
+        completed: List of Process objects after execution
+        schedule: Timeline of process execution (pid, start, finish times)
+        stats: Performance metrics including averages and CPU utilization
     """
-    # 1) Sort all processes by arrival time so we can pop the earliest
+    # Sort processes by arrival time for chronological processing
     arrival = sorted(process_list, key=lambda p: p.arrival_time)
     
-    # 2) ready: map from priority -> list of waiting processes (FIFO per priority)
+    # Map priorities to their ready processes (FIFO queue per priority)
     ready = {}
     
-    # 3) schedule: will collect all execution segments
-    schedule = []
-    completed      = []     # ← collect finished Process objects
-    idle_time      = 0      # ← total CPU idle time
-    first_response = {}     # ← record first CPU access per PID
+    # Track execution timeline and statistics
+    schedule = []        # Records when each process runs
+    completed = []       # Collects finished processes
+    idle_time = 0       # Tracks CPU idle periods
+    first_response = {} # Records when processes first get CPU
     
-    # 4) Initialize clock to first arrival (or 0 if no processes)
+    # Start clock at first process arrival
     current_time = arrival[0].arrival_time if arrival else 0
     
-    # 5) Track the currently running process
+    # Currently running process (None when CPU is idle)
     current = None
     
-    # 6) Loop until there are no arrivals left, no ready processes, and no running process
+    # Main scheduling loop - continues while we have:
+    # - Processes yet to arrive
+    # - Processes in ready queues
+    # - A process currently running
     while arrival or ready or current:
-        # 6a) Enqueue any processes that have arrived by now
+        # Move newly arrived processes to their priority queues
         while arrival and arrival[0].arrival_time <= current_time:
             p = arrival.pop(0)
             if p.priority in ready:
@@ -41,58 +44,58 @@ def priority_schedule(process_list: List[Process]):
             else:
                 ready[p.priority] = [p]
         
-        # 6b) If CPU is free, dispatch the highest-priority process that has arrived
-        if  ready:
-                prio_to_run = min(ready)
-                current = ready[prio_to_run].pop(0)
-                if not ready[prio_to_run]:
-                    del ready[prio_to_run]# after popping if the list is empty just remove it 
-                # record first response
-                if current.pid not in first_response:
-                    first_response[current.pid] = current_time - current.arrival_time
+        # If CPU is free, schedule highest priority ready process
+        if ready:
+            prio_to_run = min(ready)  # Lowest number = highest priority
+            current = ready[prio_to_run].pop(0)
+            if not ready[prio_to_run]:
+                del ready[prio_to_run]
+                
+            # Track first time each process gets CPU
+            if current.pid not in first_response:
+                first_response[current.pid] = current_time - current.arrival_time
         
-        # 6c) If still idle, advance clock to next arrival and break the loop
-        #and also that means that we passed all the processes that could have arrived 
-        # before the current time and didnt found any or they just werent on the ready list
+        # Handle CPU idle periods
         if not current:
             if arrival:
-                idle_time     += arrival[0].arrival_time - current_time# this is the only case where we would have idle time
-                current_time   = arrival[0].arrival_time
-            continue 
+                idle_time += arrival[0].arrival_time - current_time
+                current_time = arrival[0].arrival_time
+            continue
         
-        # 6d) Run the current process to completion (non-preemptive)
-        start  = current_time
+        # Execute current process to completion
+        start = current_time
         finish = start + current.burst_time
         
-        # Record the execution details
+        # Update process metrics
         turnaround = finish - current.arrival_time
         current.completion_time = finish
         current.turnaround_time = turnaround
-        current.waiting_time    = turnaround - current.burst_time
+        current.waiting_time = turnaround - current.burst_time
         
+        # Record execution in schedule
         schedule.append({
-            'pid':        current.pid,
-            'start':      start,
-            'finish':     finish,
+            'pid': current.pid,
+            'start': start,
+            'finish': finish,
         })
         completed.append(current)
         
-        # Advance the clock and clear the CPU
+        # Update clock and free the CPU
         current_time = finish
         current = None
     
-    # 7) Compute aggregate statistics
+    # Calculate final performance metrics
     n = len(completed)
-    avg_wait = sum(p.waiting_time    for p in completed) / n
-    avg_tat  = sum(p.turnaround_time for p in completed) / n
+    avg_wait = sum(p.waiting_time for p in completed) / n
+    avg_tat = sum(p.turnaround_time for p in completed) / n
     avg_resp = sum(first_response[p.pid] for p in completed) / n
     cpu_util = 100 * (current_time - idle_time) / current_time if current_time else 0
     
     stats = {
-        "avg_waiting"     : avg_wait,
-        "avg_turnaround"  : avg_tat,
-        "avg_response"    : avg_resp,
-        "cpu_utilisation" : cpu_util
+        "avg_waiting": avg_wait,
+        "avg_turnaround": avg_tat,
+        "avg_response": avg_resp,
+        "cpu_utilisation": cpu_util
     }
     
     return completed, schedule, stats

@@ -1,4 +1,8 @@
-# ───────── interface/interface.py ─────────
+# Web Interface Module for CPU Scheduling Simulator
+#
+# This module provides a Flask-based web interface for the CPU scheduling simulator.
+# It handles file uploads, algorithm configuration, and result visualization.
+
 from __future__ import annotations
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import importlib, json, pathlib, sys, os
@@ -26,6 +30,7 @@ algos = {
 # ---------------- routes ----------------------------------------------------
 @app.route("/", methods=["GET", "POST"])
 def welcome():
+    """Welcome page with file upload form"""
     if request.method == "POST":
         session["username"] = request.form["username"]
         return redirect(url_for("config"))
@@ -33,6 +38,10 @@ def welcome():
 
 @app.route("/config", methods=["GET", "POST"])
 def config():
+    """
+    Handle file upload and show algorithm configuration page.
+    Supports JSON and Excel file formats.
+    """
     if "username" not in session:
         return redirect(url_for("welcome"))
     if request.method == "POST":
@@ -44,6 +53,10 @@ def config():
 
 @app.route("/run")
 def run():
+    """
+    Execute selected scheduling algorithm and display results.
+    Shows Gantt chart and performance metrics.
+    """
     payload = session.pop("payload", None)
     if not payload:
         return redirect(url_for("config"))
@@ -133,6 +146,13 @@ def set_algorithm():
     return jsonify({'success': True})
 
 def process_json_file(file):
+    """
+    Parse process data from JSON file.
+    Args:
+        file_path: Path to JSON file containing process data
+    Returns:
+        list: List of Process objects created from file data
+    """
     try:
         data = json.load(file)
         if not isinstance(data, list):
@@ -184,6 +204,13 @@ def process_json_file(file):
         raise ValueError("Invalid JSON format")
 
 def process_excel_file(file):
+    """
+    Parse process data from Excel file.
+    Args:
+        file_path: Path to Excel file containing process data
+    Returns:
+        list: List of Process objects created from file data
+    """
     try:
         df = pd.read_excel(file)
         algorithm = session.get('current_algorithm', '')

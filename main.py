@@ -1,3 +1,8 @@
+# Main driver for CPU Scheduling Simulator
+# This module provides a command-line interface for testing and comparing
+# different CPU scheduling algorithms. It handles user input, process creation,
+# algorithm selection, and result visualization.
+
 from process import Process
 from algorithms.fcfs import fcfs_schedule
 from algorithms.priority_non_preemptive import priority_schedule
@@ -13,7 +18,9 @@ import json
 import pandas as pd
 from datetime import datetime
 
-# Terminal colors and styles
+# Terminal UI Components
+# Color class provides ANSI escape codes for terminal text formatting
+# These codes enable colored output and text styling for better UX
 class Color:
     RESET = '\033[0m'
     BOLD = '\033[1m'
@@ -39,7 +46,7 @@ class Color:
     BG_CYAN = '\033[46m'
     BG_WHITE = '\033[47m'
 
-# Utility functions for terminal UI
+# UI Helper Functions
 def clear_screen():
     """Clear the terminal screen."""
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -83,9 +90,14 @@ def input_styled(prompt):
     """Get user input with styled prompt."""
     return input(f"{Color.BOLD}{Color.BLUE}➜ {Color.RESET}{prompt}: {Color.GREEN}")
 
-# ---------------- MENU -----------------
+# Core Menu Functions
+
 def choose_mode():
-    """Choose between single algorithm or comparison mode."""
+    """
+    Display mode selection menu and handle user input.
+    Returns:
+        str: 'single' for single algorithm mode or 'comparison' for comparison mode
+    """
     print_subheader("OPERATION MODE")
     print(f"  {Color.CYAN}1{Color.RESET}) {Color.BOLD}Single Algorithm{Color.RESET} - Run one scheduling algorithm")
     print(f"  {Color.CYAN}2{Color.RESET}) {Color.BOLD}Algorithm Comparison{Color.RESET} - Compare multiple algorithms")
@@ -101,7 +113,12 @@ def choose_mode():
         time.sleep(1)
 
 def choose_algorithm():
-    """Return (algo_name, algo_function) chosen by the user."""
+    """
+    Display algorithm selection menu and handle user input.
+    Returns:
+        tuple: (algorithm_name, algorithm_function) for the chosen algorithm
+    """
+    # Dictionary mapping menu options to (name, function) pairs
     algos = {
         "1": ("FCFS", fcfs_schedule),
         "2": ("Priority (non-preemptive)", priority_schedule),
@@ -166,8 +183,19 @@ def choose_output_method():
 # ------------- DATA ENTRY --------------
 def read_processes_manually(need_priority: bool = False):
     """
-    Interactively build a list of Process objects.
-    PIDs are auto-generated as 1, 2, 3, … (no user input).
+    Interactive process data collection with input validation.
+    
+    Args:
+        need_priority: Whether to collect priority values (for priority-based algorithms)
+    
+    Returns:
+        list: List of Process objects with user-specified attributes
+    
+    Features:
+    - Auto-generated PIDs (1, 2, 3, ...)
+    - Input validation for all fields
+    - Clear error messages for invalid input
+    - Support for priority and non-priority algorithms
     """
     print_subheader("PROCESS INFORMATION")
     
@@ -386,7 +414,11 @@ def read_processes(need_priority: bool = False):
 # ------------- REPORTING ---------------
 def print_schedule(tbl):
     """
-    Pretty-print the schedule table.
+    Display execution schedule in tabular format.
+    Shows when each process starts and finishes, with total makespan.
+    
+    Args:
+        tbl: List of dicts containing execution records
     """
     print_subheader("SCHEDULE")
     
@@ -405,7 +437,13 @@ def print_schedule(tbl):
     print(f"\n{Color.YELLOW}Makespan:{Color.RESET} {Color.BOLD}{makespan}{Color.RESET}")
 
 def print_process_stats(processes):
-    """Print statistics for each process with a nice format."""
+    """
+    Display per-process statistics in tabular format.
+    Shows waiting time, turnaround time, and completion time for each process.
+    
+    Args:
+        processes: List of completed Process objects with calculated metrics
+    """
     print_subheader("PROCESS STATISTICS")
     
     # Table headers
@@ -420,7 +458,13 @@ def print_process_stats(processes):
               f"{proc.waiting_time:<16}{proc.turnaround_time:<14}{proc.completion_time:<14}{Color.RESET}")
 
 def print_metrics(metrics):
-    """Print overall metrics with visual emphasis."""
+    """
+    Display overall algorithm performance metrics.
+    Shows averages for waiting time, turnaround time, and CPU utilization.
+    
+    Args:
+        metrics: Dictionary containing calculated performance metrics
+    """
     print_subheader("PERFORMANCE METRICS")
     
     # Use a more visual presentation for metrics
@@ -613,12 +657,25 @@ def save_results(output_choice, algo_name, processes, schedule_table, metrics):
         save_to_csv_file(algo_name, processes, schedule_table, metrics)
 # --------------- DRIVER ----------------
 def main():
+    """
+    Main program entry point. Handles:
+    1. Mode selection (single/comparison)
+    2. Algorithm selection (if single mode)
+    3. Process data collection
+    4. Algorithm execution
+    5. Result visualization
+    
+    Includes error handling for:
+    - User interruption (Ctrl+C)
+    - Invalid inputs
+    - Runtime errors
+    """
     clear_screen()
     print_header("CPU SCHEDULER SIMULATOR")
     print(f"\n{Color.YELLOW}Welcome to the CPU Scheduler Simulator!{Color.RESET}")
     print("This tool demonstrates various CPU scheduling algorithms.")
     
-    # Choose mode: single algorithm or comparison
+    # Mode Selection
     mode = choose_mode()
     
     if mode == "single":
@@ -627,7 +684,7 @@ def main():
         need_priority = "Priority" in algo_name
         processes = read_processes(need_priority)
         
-        # Get quantum for Round-Robin algorithms
+        # Handle Round-Robin Quantum Input
         quantum = None
         if "Round-Robin" in algo_name:
             while True:
@@ -639,16 +696,14 @@ def main():
                 except ValueError:
                     print_error("Please enter a valid number")
         
-        # Show a loading animation
+        # Execute Selected Algorithm
         print_loading(f"Scheduling with {algo_name}")
-        
-        # Execute the scheduling algorithm
         if quantum is not None:
             list_processes, schedule_table, metrics = algo_fn(processes, quantum)
         else:
             list_processes, schedule_table, metrics = algo_fn(processes)
         
-        # Print results
+        # Display Results
         print_success(f"Scheduled {len(processes)} processes using {Color.BOLD}{algo_name}{Color.RESET}")
         print_schedule(schedule_table)
         print_process_stats(list_processes)
@@ -670,6 +725,7 @@ def main():
     
     print_footer()
 
+# Entry Point with Error Handling
 if __name__ == "__main__":
     try:
         main()
