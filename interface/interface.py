@@ -140,36 +140,36 @@ def process_json_file(file):
         
         processes = []
         algorithm = session.get('current_algorithm', '')
-        needs_priority = any(word in algorithm for word in ['Priority', 'priority']) if algorithm else False
+        needs_priority = any(word in algorithm.lower() for word in ['priority', 'prio'])
         
         for i, proc in enumerate(data, 1):
             pid = proc.get('pid', i)
             
-            # Validate required fields
+            # Required field validation
             if 'burst_time' not in proc:
                 raise ValueError(f"Process {pid}: Missing required field 'burst_time'")
             
-            # Strict priority validation for priority algorithms
+            # Priority validation for priority algorithms
             if needs_priority and 'priority' not in proc:
-                raise ValueError(f"Priority value is required for {algorithm} algorithm")
-                
+                raise ValueError(f"Process {pid}: Missing required field 'priority' for {algorithm} algorithm")
+            
             arrival_time = int(proc.get('arrival_time', 0))
             burst_time = int(proc['burst_time'])
             
-            # Only get priority if it exists, don't default to 0
+            # Only get priority if it exists or is needed
             if 'priority' in proc:
                 priority = int(proc['priority'])
             elif needs_priority:
-                raise ValueError(f"Priority value is required for {algorithm} algorithm")
+                raise ValueError(f"Process {pid}: Priority is required for {algorithm} algorithm")
             else:
                 priority = 0
             
-            # Validate values
+            # Value validation
             if burst_time <= 0:
                 raise ValueError(f"Process {pid}: Burst time must be positive")
             if arrival_time < 0:
                 raise ValueError(f"Process {pid}: Arrival time cannot be negative")
-            if 'priority' in proc and priority < 0:
+            if needs_priority and priority < 0:
                 raise ValueError(f"Process {pid}: Priority cannot be negative")
             
             processes.append({
@@ -186,7 +186,8 @@ def process_json_file(file):
 def process_excel_file(file):
     try:
         df = pd.read_excel(file)
-        required_columns = ['PID', 'Arrival Time', 'Burst Time']
+        algorithm = session.get('current_algorithm', '')
+        needs_priority = any(word in algorithm.lower() for word in ['priority', 'prio'])
         
         # Check for column names (case-insensitive)
         df.columns = df.columns.str.lower()
@@ -205,8 +206,13 @@ def process_excel_file(file):
                     break
         
         # Validate required columns
-        missing_cols = [col for col in ['pid', 'arrival_time', 'burst_time'] 
+        missing_cols = [col for col in ['burst_time'] 
                        if col not in df.columns]
+        if needs_priority:
+            if 'priority' not in df.columns:
+                raise ValueError(f"Priority column is required for {algorithm} algorithm")
+            missing_cols.extend([col for col in ['priority'] if col not in df.columns])
+        
         if missing_cols:
             raise ValueError(f"Missing required columns: {', '.join(missing_cols)}")
         
@@ -214,14 +220,27 @@ def process_excel_file(file):
         processes = []
         for i, row in df.iterrows():
             pid = int(row.get('pid', i + 1))
-            arrival_time = int(row['arrival_time'])
-            burst_time = int(row['burst_time'])
-            priority = int(row.get('priority', 0))
+            arrival_time = int(row.get('arrival_time', 0))
             
+            if 'burst_time' not in row:
+                raise ValueError(f"Process {pid}: Missing required field 'burst_time'")
+            burst_time = int(row['burst_time'])
+            
+            # Priority validation
+            if needs_priority:
+                if 'priority' not in row:
+                    raise ValueError(f"Process {pid}: Priority is required for {algorithm} algorithm")
+                priority = int(row['priority'])
+            else:
+                priority = int(row.get('priority', 0))
+            
+            # Value validation
             if burst_time <= 0:
                 raise ValueError(f"Process {pid}: Burst time must be positive")
             if arrival_time < 0:
                 raise ValueError(f"Process {pid}: Arrival time cannot be negative")
+            if needs_priority and priority < 0:
+                raise ValueError(f"Process {pid}: Priority cannot be negative")
             
             processes.append({
                 'pid': pid,
