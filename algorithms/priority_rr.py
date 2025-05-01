@@ -3,7 +3,6 @@
 
 from typing import List, Dict, Tuple
 from process import Process
-from algorithms.utility_functions import sort_by_arrival, init_current_time
 
 def priority_round_robin(process_list: List[Process], quantum: int = 4, context_switch: int = 0):
     """
@@ -20,7 +19,7 @@ def priority_round_robin(process_list: List[Process], quantum: int = 4, context_
         stats: Performance metrics including averages and utilization
     """
     # Sort processes by arrival time for chronological processing
-    arrival = sort_by_arrival(process_list)
+    arrival = sorted(process_list, key=lambda p: p.arrival_time)
 
     # Priority-based ready queues - maps priority levels to their processes
     ready: Dict[int, List[Process]] = {}
@@ -32,7 +31,7 @@ def priority_round_robin(process_list: List[Process], quantum: int = 4, context_
     first_response = {}  # When each process first gets CPU
 
     # Initialize simulation clock to earliest process arrival
-    current_time = init_current_time(arrival)
+    current_time = arrival[0].arrival_time if arrival else 0
 
     # Track current process execution state
     current = None          # Currently executing process
@@ -151,16 +150,3 @@ def priority_round_robin(process_list: List[Process], quantum: int = 4, context_
     }
 
     return completed, schedule, stats
-
-    p2 = Process('B', arrival_time=1,  burst_time=4, priority=1)
-    p3 = Process('C', arrival_time=12, burst_time=9, priority=3)
-    p4 = Process('D', arrival_time=6,  burst_time=5, priority=1)
-
-    completed, timeline, metrics = priority_round_robin(
-        [p1, p2, p3, p4], quantum=4
-    )
-
-    for seg in timeline:
-        print(f"{seg['pid']} : {seg['start']} → {seg['finish']}")
-
-    print("\nMetrics:", metrics)
