@@ -1,3 +1,9 @@
+# Algorithm Comparison Module
+#
+# This module provides functionality to compare different CPU scheduling algorithms
+# by running them on the same set of processes and displaying comparative results.
+# It helps visualize the trade-offs between different scheduling approaches.
+
 from tabulate import tabulate
 from algorithms.fcfs import fcfs_schedule
 from algorithms.priority_non_preemptive import priority_schedule

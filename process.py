@@ -17,8 +17,7 @@ class Process:
         
         # Turnaround time = completion_time - arrival_time (compute after the process finishes)
         self.turnaround_time = 0  
-    
-        
+
         self.waiting_time = 0
 
     def __str__(self):
