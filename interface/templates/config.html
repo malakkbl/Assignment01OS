@@ -151,6 +151,19 @@
     algorithmSelect.addEventListener('change', updateFormForAlgorithm);
     document.getElementById('processFile').addEventListener('change', handleFileUpload);
 
+    // Algorithm change handler
+    algorithmSelect.addEventListener('change', function() {
+        // Store current algorithm in backend session
+        fetch('/set_algorithm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({algorithm: this.value})
+        });
+        updateFormForAlgorithm();
+    });
+
     // Initialize form based on selected algorithm
     updateFormForAlgorithm();
     
@@ -282,6 +295,8 @@
     }
 
     // File upload handling
+    document.getElementById('processFile').addEventListener('change', handleFileUpload);
+
     async function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -295,21 +310,30 @@
                 body: formData
             });
 
+            const data = await response.json();
+            
             if (!response.ok) {
-                throw new Error('Upload failed');
+                throw new Error(data.error || 'Upload failed');
             }
 
-            const data = await response.json();
+            // Reset the file input to allow re-uploading the same file
+            event.target.value = '';
+
+            // Clear existing processes and update with new ones
+            processes = [];
             processes = data.processes;
             nextPid = Math.max(...processes.map(p => p.pid), 0) + 1;
+            
+            // Force re-render of the process table
             renderProcessTable();
             updateProcJson();
 
-            // Show success message
             showNotification('File uploaded successfully!', 'success');
         } catch (error) {
             console.error('Upload error:', error);
-            showNotification('Error uploading file. Please check the format.', 'error');
+            // Reset the file input to allow re-uploading
+            event.target.value = '';
+            showNotification(error.message || 'Error uploading file. Please check the format.', 'error');
         }
     }
 

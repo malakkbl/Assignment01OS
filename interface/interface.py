@@ -126,6 +126,12 @@ def upload_processes():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@app.route('/set_algorithm', methods=['POST'])
+def set_algorithm():
+    data = request.json
+    session['current_algorithm'] = data.get('algorithm', '')
+    return jsonify({'success': True})
+
 def process_json_file(file):
     try:
         data = json.load(file)
@@ -133,16 +139,38 @@ def process_json_file(file):
             raise ValueError("JSON file must contain an array of processes")
         
         processes = []
+        algorithm = session.get('current_algorithm', '')
+        needs_priority = any(word in algorithm for word in ['Priority', 'priority']) if algorithm else False
+        
         for i, proc in enumerate(data, 1):
             pid = proc.get('pid', i)
-            arrival_time = int(proc.get('arrival_time', 0))
-            burst_time = int(proc.get('burst_time'))
-            priority = int(proc.get('priority', 0))
             
+            # Validate required fields
+            if 'burst_time' not in proc:
+                raise ValueError(f"Process {pid}: Missing required field 'burst_time'")
+            
+            # Strict priority validation for priority algorithms
+            if needs_priority and 'priority' not in proc:
+                raise ValueError(f"Priority value is required for {algorithm} algorithm")
+                
+            arrival_time = int(proc.get('arrival_time', 0))
+            burst_time = int(proc['burst_time'])
+            
+            # Only get priority if it exists, don't default to 0
+            if 'priority' in proc:
+                priority = int(proc['priority'])
+            elif needs_priority:
+                raise ValueError(f"Priority value is required for {algorithm} algorithm")
+            else:
+                priority = 0
+            
+            # Validate values
             if burst_time <= 0:
                 raise ValueError(f"Process {pid}: Burst time must be positive")
             if arrival_time < 0:
                 raise ValueError(f"Process {pid}: Arrival time cannot be negative")
+            if 'priority' in proc and priority < 0:
+                raise ValueError(f"Process {pid}: Priority cannot be negative")
             
             processes.append({
                 'pid': pid,
