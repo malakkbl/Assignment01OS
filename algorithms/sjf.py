@@ -5,10 +5,14 @@ def sjf(processes: List[Process]):
     # Simulates a non pre-emptive shortest-job-first CPU scheduler when supplied with a list of process objects. 
     """
     Non-pre-emptive Shortest Job First scheduler.
+    
+    Args:
+        process_list: List of Process objects to be scheduled
+    
     Returns:
-        completed  – list of Process objects with stats filled in
-        schedule   – list of dicts {pid, start, finish}
-        metrics    – dict with averages and CPU utilisation
+        completed: List of Process objects after execution
+        schedule: Timeline of process execution (pid, start, finish)
+        stats: Performance metrics including averages and utilization
     """
 
     # Chronological event list

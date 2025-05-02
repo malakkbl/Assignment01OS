@@ -14,7 +14,7 @@ import main  # reuse helpers
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.urandom(16)            # for session
 
-# --- algorithm map ----------------------------------------
+# algorithm map 
 from algorithms.sjf               import sjf
 from algorithms.round_robin       import round_robin
 from algorithms.priority_rr       import priority_round_robin
