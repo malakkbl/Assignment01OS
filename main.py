@@ -235,7 +235,7 @@ def read_processes_manually(need_priority: bool = False):
                 print_error("Please enter a valid number")
 
         if need_priority:
-            # --- Priority with validation ---
+            # Priority with validation
             while True:
                 try:
                     prio = int(input(f"  {Color.CYAN}Priority{Color.RESET} (lower = higher priority): "))
@@ -414,7 +414,7 @@ def read_processes(need_priority: bool = False):
         # Fallback to manual entry
         return read_processes_manually(need_priority)
 
-# ------------- REPORTING ---------------
+# REPORTING
 def print_schedule(tbl):
     """
     Display execution schedule in tabular format.
@@ -658,7 +658,7 @@ def save_results(output_choice, algo_name, processes, schedule_table, metrics):
         save_to_excel_file(algo_name, processes, schedule_table, metrics)
     elif output_choice == "5":
         save_to_csv_file(algo_name, processes, schedule_table, metrics)
-# --------------- DRIVER ----------------
+# DRIVER 
 def main():
     """
     Main program entry point. Handles:

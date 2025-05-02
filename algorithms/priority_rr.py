@@ -1,10 +1,4 @@
 # Priority Round-Robin CPU Scheduling  (minimal patch – no mid-slice pre-emption)
-# ------------------------------------------------------------------------------
-#  Only two small changes to your original logic:
-#  1)  We **removed** the block that yanked the CPU away when a higher-priority
-#      job arrived mid-quantum.  The running process now keeps its slice.
-#  2)  Added a clarifying docstring line and (optional) context-switch delay
-#      right after a slice ends.  Everything else is exactly the same layout.
 
 from typing import List, Dict, Tuple
 from process import Process
@@ -13,17 +7,23 @@ from process import Process
 def priority_round_robin(
     process_list: List[Process],
     quantum: int = 4,
-    context_switch: int = 0
 ) -> Tuple[List[Process], List[dict], Dict[str, float]]:
     """
     Priority-based Round Robin scheduler.
-    ✦ A running job is **not pre-empted inside its current quantum** when higher
-      priority work shows up; it finishes that slice first.
+    
+    Args:
+        processes: List of Process objects to be scheduled
+        quantum: Maximum time slice given to each process
+        
+    Returns
+    -------
+    completed : List[Process]
+    schedule  : List[dict]  (pid, start, finish, turnaround per segment)
+    stats     : dict        (avg_waiting, avg_turnaround, avg_response, cpu_utilisation)
+
     """
 
-    # -------------------------------------------------------------------------
     #  Setup
-    # -------------------------------------------------------------------------
     arrival = sorted(process_list, key=lambda p: p.arrival_time)
     ready: Dict[int, List[Process]] = {}
 
@@ -37,22 +37,17 @@ def priority_round_robin(
     last_start   = None
     slice_end    = None
 
-    # -------------------------------------------------------------------------
     #  Main loop
-    # -------------------------------------------------------------------------
     while arrival or ready or current:
 
         # Admit any processes that have arrived.
         while arrival and arrival[0].arrival_time <= current_time:
             p = arrival.pop(0)
             ready.setdefault(p.priority, []).append(p)
-            # ---------------  PATCH: no more mid-slice pre-emption ---------------
-            # (The four lines that used to interrupt 'current' were removed.)
-            # ---------------------------------------------------------------------
 
         # If CPU is idle, pick next ready process.
         if not current and ready:
-            prio   = min(ready)                # lower value ⇒ higher priority
+            prio   = min(ready)                # lower value > higher priority
             current = ready[prio].pop(0)
             if not ready[prio]:
                 del ready[prio]
@@ -99,13 +94,7 @@ def priority_round_robin(
             slice_end = None
             last_start = None
 
-            # Optional context-switch overhead
-            if context_switch:
-                current_time += context_switch
-
-    # -------------------------------------------------------------------------
     #  Aggregate metrics
-    # -------------------------------------------------------------------------
     n = len(completed) or 1
     avg_wait = sum(p.waiting_time     for p in completed) / n
     avg_tat  = sum(p.turnaround_time  for p in completed) / n

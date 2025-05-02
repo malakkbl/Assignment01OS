@@ -5,7 +5,10 @@ from process import Process
 def priority_preemptive_schedule(process_list):
     """
     Preemptive priority scheduling (lower number = higher priority).
-
+    
+    Args:
+        process_list: List of Process objects to be scheduled
+        
     Returns
     -------
     completed : List[Process]

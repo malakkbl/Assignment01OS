@@ -2,10 +2,18 @@
 
 A comprehensive CPU scheduling simulator that implements multiple scheduling algorithms with both terminal and web interfaces.
 
+### Authors
+- Labzae Kawtar
+- Kably Malak
+
+### Supervised by
+- Pr. Iraqi Youssef
+- Pr. Abderrafi ABDEDDINE
+
 ## Project Structure
 
 ```
-SourceCode/
+Assignment01OS/
 ├── algorithms/              # Scheduling algorithm implementations
 │   ├── fcfs.py            # First-Come-First-Serve
 │   ├── sjf.py             # Shortest Job First
@@ -50,47 +58,72 @@ SourceCode/
   - Manual process entry
 
 - Performance metrics:
-  - Average waiting time
-  - Average turnaround time
-  - CPU utilization
-  - Context switches
+  - Waiting Time
+  - Turnaround Time
+  - Response Time
+  - CPU Utilization
 
 ## Setup Instructions
 
 1. **Prerequisites**:
    - Python 3.9 or higher
    - pip (Python package installer)
+   - Git (for cloning the repository)
 
-2. **Installation**:
+2. **Getting the Code**:
    ```bash
-   # Clone or download the repository
-   cd SourceCode
-   python requirements_installation.py
+   # Clone the repository
+   git clone https://github.com/malakkbl/Assignment01OS.git
+   cd Assignment01OS
    ```
 
-3. **Running the Simulator**:
+3. **Installing Dependencies**:
+   ```bash
+   # Run the installation script
+   python requirements_installation.py
+   ```
+   This will install all required packages:
+   - Core: flask, pandas, numpy
+   - Visualization: plotly
+   - File handling: openpyxl
+   - Documentation: jupyter, ipykernel
+   - Terminal UI: tabulate, colorama
+
+4. **Running the Simulator**:
 
    A. Terminal Interface:
    ```bash
    python main.py
    ```
-   
+   Features:
+   - Text-based interactive menu
+   - Support for single algorithm or comparison mode
+   - Process input via JSON/Excel files or manual entry
+   - Formatted table output with colors
+
    B. Web Interface:
    ```bash
    python interface/interface run
    ```
    Then open http://127.0.0.1:5000 in your web browser
+   Features:
+   - Interactive web UI
+   - Drag-and-drop file upload
+   - Real-time process management
+   - Interactive Gantt charts
+   - Detailed performance metrics
 
-## Sample Data
+5. **Sample Data**:
+   - Use files in `FileToUpload/` directory:
+     - `test_processes.json`: JSON format sample
+     - `test_processes.xlsx`: Excel format sample
+   - Or enter process data manually through either interface
 
-Sample process files are provided in the `FileToUpload` directory:
-- `test_processes.json`
-- `test_processes.xlsx`
-
-## Documentation
-
-Detailed algorithm documentation is available in Jupyter notebooks under the `documentation` directory. To view:
-
-```bash
-jupyter notebook documentation/
-```
+6. **Documentation**:
+   ```bash
+   jupyter notebook documentation/
+   ```
+   Access detailed documentation for each algorithm:
+   - Theory and implementation details
+   - Step-by-step execution flow
+   - Performance characteristics
