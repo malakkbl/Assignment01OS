@@ -1,0 +1,32 @@
+COMPARISON RESULTS
++----------------------+--------+-------+---------------+
+| Metric               |   FCFS |   SJF |   Round-Robin |
++======================+========+=======+===============+
+| Avg. Waiting Time    |     14 |    11 |          20.5 |
++----------------------+--------+-------+---------------+
+| Avg. Turnaround Time |     23 |    20 |          29.5 |
++----------------------+--------+-------+---------------+
+| Avg. Response Time   |     14 |    11 |          20.5 |
++----------------------+--------+-------+---------------+
+| CPU Utilization %    |    100 |   100 |         100   |
++----------------------+--------+-------+---------------+
+
+ANALYSIS:
+
+Avg. Waiting Time:
+Best: SJF (11.00)
+- FCFS: 1.3x longer
+- Round-Robin: 1.9x longer
+
+Avg. Turnaround Time:
+Best: SJF (20.00)
+- FCFS: 1.1x longer
+- Round-Robin: 1.5x longer
+
+Avg. Response Time:
+Best: SJF (11.00)
+- FCFS: 1.3x longer
+- Round-Robin: 1.9x longer
+
+CPU Utilization %:
+All algorithms have the same value: 100.00%

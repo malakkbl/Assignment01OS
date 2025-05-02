@@ -1,5 +1,3 @@
-# Round Robin CPU Scheduling Algorithm
-
 from collections import deque
 from typing import List, Tuple
 from process import Process
@@ -29,7 +27,7 @@ def round_robin(processes: List[Process], quantum: int = 4):
     # Track system metrics
     clock = 0                         # Current simulation time
     idle_time = 0                     # Total CPU idle time
-    first_response = {}               # Track when each process first gets CPU
+    response_times = {}               # Track when each process first gets CPU
     
     # Main scheduling loop - continue while we have:
     # - Processes yet to arrive
@@ -49,9 +47,9 @@ def round_robin(processes: List[Process], quantum: int = 4):
         # Select next process from ready queue
         current = ready_q.popleft()
         
-        # Record first response time for this process
-        if current.pid not in first_response:
-            first_response[current.pid] = clock - current.arrival_time
+        # Record response time ONLY if this is the first time the process gets CPU
+        if current.pid not in response_times:
+            response_times[current.pid] = clock - current.arrival_time
             
         # Calculate execution time for this quantum
         run_time = min(quantum, current.remaining_time)
@@ -77,13 +75,14 @@ def round_robin(processes: List[Process], quantum: int = 4):
             current.completion_time = clock
             current.turnaround_time = clock - current.arrival_time
             current.waiting_time = current.turnaround_time - current.burst_time
+            current.response_time = response_times[current.pid]  # Store response time in the process object
             completed.append(current)
     
     # Calculate final performance metrics
     n = len(completed)
     avg_wait = sum(p.waiting_time for p in completed) / n
     avg_tat = sum(p.turnaround_time for p in completed) / n
-    avg_resp = sum(first_response[p.pid] for p in completed) / n
+    avg_resp = sum(p.response_time for p in completed) / n
     cpu_util = 100 * (clock - idle_time) / clock
     
     stats = {

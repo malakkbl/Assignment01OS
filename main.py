@@ -251,6 +251,7 @@ def read_processes_manually(need_priority: bool = False):
 
     print_success(f"Successfully created {n} processes")
     return processes
+
 def read_processes_from_json(need_priority: bool = False):
     """Read process information from a JSON file."""
     print_subheader("JSON FILE INPUT")
@@ -283,7 +284,7 @@ def read_processes_from_json(need_priority: bool = False):
                             arrival = 0
                         
                         if burst <= 0:
-                            print_warning(f"Process #{i} has invalid burst time, setting to 1")
+                            print_warning(f"Process #{i} has invalid burst time, setting to 1")#just a default value could be 0
                             burst = 1
                         
                         # Always read priority if available
@@ -397,6 +398,8 @@ def read_processes_from_excel(need_priority: bool = False):
         if retry != 'y':
             print_warning("Falling back to manual entry...")
             return read_processes_manually(need_priority)
+
+            
 def read_processes(need_priority: bool = False):
     """Choose input method and read processes accordingly."""
     input_method = choose_input_method()
