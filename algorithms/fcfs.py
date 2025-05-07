@@ -24,8 +24,7 @@ def fcfs_schedule(process_list: List[Process]) -> Tuple[List[Process], List[dict
     idle_time = 0       # Tracks CPU idle periods
     first_response = {} # Records when processes first get CPU
     
-    # Start clock at first process arrival
-    clock = procs[0].arrival_time if procs else 0
+    clock =0
     
     # Process each job in arrival order
     for proc in procs:

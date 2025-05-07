@@ -32,7 +32,7 @@ def priority_round_robin(
     idle_time  = 0
     first_resp = {}
 
-    current_time = arrival[0].arrival_time if arrival else 0
+    current_time =  0
     current      = None
     last_start   = None
     slice_end    = None

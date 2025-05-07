@@ -1,0 +1,26 @@
+COMPARISON RESULTS
++----------------------+--------+-------+
+| Metric               |   FCFS |   SJF |
++======================+========+=======+
+| Avg. Waiting Time    |    1.5 |   1.5 |
++----------------------+--------+-------+
+| Avg. Turnaround Time |    6.5 |   6.5 |
++----------------------+--------+-------+
+| Avg. Response Time   |    1.5 |   1.5 |
++----------------------+--------+-------+
+| CPU Utilization %    |  100   | 100   |
++----------------------+--------+-------+
+
+ANALYSIS:
+
+Avg. Waiting Time:
+All algorithms have the same value: 1.50
+
+Avg. Turnaround Time:
+All algorithms have the same value: 6.50
+
+Avg. Response Time:
+All algorithms have the same value: 1.50
+
+CPU Utilization %:
+All algorithms have the same value: 100.00%

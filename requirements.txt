@@ -1,0 +1,13 @@
+tabulate
+colorama
+flask
+pandas
+openpyxl
+numpy
+plotly
+werkzeug
+jupyter
+ipykernel
+pytest
+black
+flake8
