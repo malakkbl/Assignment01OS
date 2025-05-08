@@ -219,7 +219,6 @@ def process_excel_file(file):
         # Check for column names (case-insensitive)
         df.columns = df.columns.str.lower()
         column_mapping = {
-            'pid': ['pid', 'process id', 'id'],
             'arrival_time': ['arrival time', 'arrival', 'at'],
             'burst_time': ['burst time', 'burst', 'bt'],
             'priority': ['priority', 'prio', 'pr']
@@ -246,7 +245,8 @@ def process_excel_file(file):
         # Convert to list of dictionaries
         processes = []
         for i, row in df.iterrows():
-            pid = int(row.get('pid', i + 1))
+            # Automatically assign PID as index + 1
+            pid = i + 1
             arrival_time = int(row.get('arrival_time', 0))
             
             if 'burst_time' not in row:
