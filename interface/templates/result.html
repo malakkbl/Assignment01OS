@@ -313,7 +313,7 @@ Components:
         });
     }
 // ────────── CONSOLIDATED CPU USAGE CIRCULAR GRAPH ──────────
-function createCpuUsageComparisonChart() {
+    function createCpuUsageComparisonChart() {
     // Prepare data for all processes
     const processData = processes.map(process => {
         return {
@@ -509,7 +509,6 @@ function createCpuUsageComparisonChart() {
         });
 
         // Process indicators that appear at their respective start times
-        // Process indicators that appear at their respective start times
 processes.forEach(process => {
     // Find the first segment for this process
     const firstSegment = scheduleData
@@ -571,7 +570,7 @@ processes.forEach(process => {
 
 // Here's the updated section of the updateAnimation function that handles process indicator positioning:
 
-function updateAnimation(time) {
+    function updateAnimation(time) {
     // Ensure time doesn't exceed totalTime for display purposes
     const displayTime = Math.min(time, totalTime);
     

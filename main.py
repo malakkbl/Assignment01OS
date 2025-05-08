@@ -92,6 +92,7 @@ def input_styled(prompt):
 
 # Core Menu Functions
 
+# Function of comparison mode, do you want single or comparison mode?
 def choose_mode():
     """
     Display mode selection menu and handle user input.
@@ -181,6 +182,21 @@ def choose_output_method():
         time.sleep(1)
 
 # ------------- DATA ENTRY --------------
+
+def read_processes(need_priority: bool = False):
+    """Choose input method and read processes accordingly."""
+    input_method = choose_input_method()
+    
+    if input_method == "1":
+        return read_processes_manually(need_priority)
+    elif input_method == "2":
+        return read_processes_from_json(need_priority)
+    elif input_method == "3":
+        return read_processes_from_excel(need_priority)
+    else:
+        # Fallback to manual entry
+        return read_processes_manually(need_priority)
+    
 def read_processes_manually(need_priority: bool = False):
     """
     Interactive process data collection with input validation.
@@ -255,6 +271,7 @@ def read_processes_manually(need_priority: bool = False):
 def read_processes_from_json(need_priority: bool = False):
     """Read process information from a JSON file."""
     print_subheader("JSON FILE INPUT")
+    print("Just know that even if you put pids for processes they wont be taken into considertion and will be auto generated")
     
     while True:
         filename = input_styled("Enter JSON file path").strip()
@@ -400,19 +417,7 @@ def read_processes_from_excel(need_priority: bool = False):
             return read_processes_manually(need_priority)
 
             
-def read_processes(need_priority: bool = False):
-    """Choose input method and read processes accordingly."""
-    input_method = choose_input_method()
-    
-    if input_method == "1":
-        return read_processes_manually(need_priority)
-    elif input_method == "2":
-        return read_processes_from_json(need_priority)
-    elif input_method == "3":
-        return read_processes_from_excel(need_priority)
-    else:
-        # Fallback to manual entry
-        return read_processes_manually(need_priority)
+
 
 # REPORTING
 def print_schedule(tbl):
@@ -721,7 +726,7 @@ def main():
         need_priority = True
         processes = read_processes(need_priority)
         
-        # Run the comparison (assumes run_algorithm_comparison handles its own output)
+        # Run the comparison 
         print_loading("Running algorithm comparison")
         results = run_algorithm_comparison(processes, Color)
         print_success("Algorithm comparison completed! Check above for results.")

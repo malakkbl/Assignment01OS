@@ -22,24 +22,15 @@ def install_requirements():
     required_packages = [
         # Terminal interface requirements
         'tabulate',      # For formatted table output
-        'colorama',      # For colored terminal output
         
         # Web interface requirements
         'flask',         # Web framework
         'pandas',        # For data manipulation and Excel file handling
-        'openpyxl',     # For Excel file support
-        'numpy',        # For numerical computations
-        'plotly',       # For interactive visualizations
-        'werkzeug',     # For file uploads and web utilities
         
         # Jupyter notebook support (for documentation)
         'jupyter',       # For running documentation notebooks
         'ipykernel',    # For Jupyter notebook kernel
-        
-        # Development utilities
-        'pytest',        # For running tests
-        'black',        # For code formatting
-        'flake8'        # For code linting
+
     ]
     
     print("Checking and installing required packages...")

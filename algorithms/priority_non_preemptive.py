@@ -25,8 +25,8 @@ def priority_schedule(process_list: List[Process]):
     idle_time = 0       # Tracks CPU idle periods
     first_response = {} # Records when processes first get CPU
     
-    # Start clock at first process arrival
-    current_time = arrival[0].arrival_time if arrival else 0
+    # Start clock at 0
+    current_time =  0
     
     # Currently running process (None when CPU is idle)
     current = None

@@ -32,10 +32,10 @@ def priority_round_robin(
     idle_time  = 0
     first_resp = {}
 
-    current_time = arrival[0].arrival_time if arrival else 0
+    current_time =  0
     current      = None
-    last_start   = None
-    slice_end    = None
+    last_start   = None #when the current process started its latest slice.
+    slice_end    = None # when the current slice should end (after quantum or earlier)
 
     #  Main loop
     while arrival or ready or current:

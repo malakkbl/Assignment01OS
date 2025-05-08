@@ -12,10 +12,8 @@ from algorithms.sjf import sjf
 from algorithms.round_robin import round_robin
 from algorithms.priority_rr import priority_round_robin
 import copy
-from colorama import init
+from textwrap import shorten
 
-# Initialize colorama for cross-platform terminal colors
-init()
 
 class AlgorithmComparison:
     """Class for comparing different CPU scheduling algorithms"""
@@ -33,22 +31,20 @@ class AlgorithmComparison:
         
         # Metrics to compare
         self.metrics_to_compare = [
-            "avg_waiting_time", 
-            "avg_turnaround_time", 
-            "avg_response_time",
+            "avg_waiting", 
+            "avg_turnaround", 
+            "avg_response",
             "cpu_utilization"
         ]
         
         # Friendly names for metrics
         self.metric_names = {
-            "avg_waiting_time": "Avg. Waiting Time",
-            "avg_turnaround_time": "Avg. Turnaround Time",
-            "avg_response_time": "Avg. Response Time",
+            "avg_waiting": "Avg. Waiting Time",
+            "avg_turnaround": "Avg. Turnaround Time",
+            "avg_response": "Avg. Response Time",
             "cpu_utilization": "CPU Utilization %"
         }
         
-        # Colors for charts
-        self.colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c']
     
     def select_algorithms_to_compare(self, color):
         """Let the user select multiple algorithms to compare"""
@@ -133,19 +129,19 @@ class AlgorithmComparison:
     def _validate_and_fix_metrics(self, metrics, processes):
         """Ensure all required metrics exist and are valid"""
         # Validate/Create Waiting Time
-        if 'avg_waiting_time' not in metrics or metrics['avg_waiting_time'] <= 0:
+        if 'avg_waiting' not in metrics or metrics['avg_waiting'] <= 0:
             waiting_times = [p.completion_time - p.arrival_time - p.burst_time 
                             for p in processes if hasattr(p, 'completion_time')]
-            metrics['avg_waiting_time'] = sum(waiting_times)/len(waiting_times) if waiting_times else 0.0
+            metrics['avg_waiting'] = sum(waiting_times)/len(waiting_times) if waiting_times else 0.0
 
         # Validate/Create Turnaround Time
-        if 'avg_turnaround_time' not in metrics or metrics['avg_turnaround_time'] <= 0:
+        if 'avg_turnaround' not in metrics or metrics['avg_turnaround'] <= 0:
             turnaround_times = [p.completion_time - p.arrival_time 
                             for p in processes if hasattr(p, 'completion_time')]
-            metrics['avg_turnaround_time'] = sum(turnaround_times)/len(turnaround_times) if turnaround_times else 0.0
+            metrics['avg_turnaround'] = sum(turnaround_times)/len(turnaround_times) if turnaround_times else 0.0
 
         # Validate/Create Response Time
-        if 'avg_response_time' not in metrics or metrics['avg_response_time'] <= 0:
+        if 'avg_response' not in metrics or metrics['avg_response'] <= 0:
             response_times = []
             for p in processes:
                 if hasattr(p, 'response_time'):
@@ -155,7 +151,7 @@ class AlgorithmComparison:
                 else:
                     rt = getattr(p, 'waiting_time', 0)
                 response_times.append(rt)
-            metrics['avg_response_time'] = sum(response_times)/len(response_times) if response_times else 0.0
+            metrics['avg_response'] = sum(response_times)/len(response_times) if response_times else 0.0
 
         # Validate/Create CPU Utilization (with 100% cap)
         if 'cpu_utilization' not in metrics or metrics['cpu_utilization'] <= 0:
@@ -221,7 +217,7 @@ class AlgorithmComparison:
                 else:
                     # Time-based comparisons
                     if best_val == 0:
-                        comparison = "N/A"
+                        comparison = "worse"
                     else:
                         ratio = a_val / best_val
                         comparison = f"{ratio:.1f}x longer"
@@ -294,28 +290,33 @@ class AlgorithmComparison:
                             comparison = f"{ratio:.1f}x longer"
                     
                     f.write(f"- {a_name}: {comparison}\n")
+    
     def _create_comparison_table(self, results):
-            """Create a comparison table of metrics for all algorithms"""
-            # Prepare table headers
-            headers = ["Metric"]
+        # --- 1. Slim headers ---------------------------------------------------
+        headers = ["Metric"]
+        for algo_id in results:
+            long_name = results[algo_id]['name']
+            # shorten() keeps words; fallback to first 10 chars if it can’t fit
+            headers.append(shorten(long_name, width=18, placeholder="…") or long_name[:16])
+
+        # --- 2. Build rows exactly as before -----------------------------------
+        rows = []
+        for metric in self.metrics_to_compare:
+            row = [self.metric_names[metric]]
             for algo_id in results:
-                headers.append(results[algo_id]['name'])
-            
-            # Prepare table rows
-            rows = []
-            for metric in self.metrics_to_compare:
-                row = [self.metric_names[metric]]
-                
-                for algo_id in results:
-                    # Format the metric value to 2 decimal places
-                    value = results[algo_id]['metrics'].get(metric, 0)
-                    row.append(f"{value:.2f}")
-                
-                rows.append(row)
-            
-            # Create table using tabulate
-            table = tabulate(rows, headers, tablefmt="grid")
-            return table
+                value = results[algo_id]['metrics'].get(metric, 0)
+                row.append(f"{value:.2f}")
+            rows.append(row)
+
+        # --- 3. Nicer tabulate call -------------------------------------------
+        table = tabulate(
+            rows,
+            headers=headers,
+            tablefmt="fancy_grid",   
+            numalign="right",
+            stralign="center"
+        )
+        return table
     
 def run_algorithm_comparison(processes, color):
     """Main function to run the algorithm comparison"""
