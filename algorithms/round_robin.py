@@ -75,7 +75,7 @@ def round_robin(processes: List[Process], quantum: int = 4):
             current.completion_time = clock
             current.turnaround_time = clock - current.arrival_time
             current.waiting_time = current.turnaround_time - current.burst_time
-            current.response_time = response_times[current.pid]  # Store response time in the process object
+            current.response_time = response_times[current.pid]
             completed.append(current)
     
     # Calculate final performance metrics
